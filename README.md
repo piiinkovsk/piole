@@ -13,8 +13,9 @@ A mobile application built with Expo/React Native for managing your cosmetics co
 
 ## Tech Stack
 
-- Expo (managed workflow)
-- React Native
+- Expo SDK 53 (managed workflow)
+- React Native 0.79.4
+- React 19.0.0
 - TypeScript
 - React Navigation
 - Zustand for state management

@@ -23,6 +23,7 @@
     "plugins": [
       "expo-secure-store",
       "expo-image-picker"
-    ]
+    ],
+    "sdkVersion": "53.0.0"
   }
 }
