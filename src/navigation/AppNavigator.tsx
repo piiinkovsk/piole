@@ -6,11 +6,14 @@ import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import {
+  RootStackParamList,
   RootTabParamList,
   CollectionStackParamList,
-  WishlistStackParamList
+  WishlistStackParamList,
+  AuthStackParamList
 } from './types';
 import { useTheme } from '../store/ThemeContext';
+import { useAuth } from '../store/AuthContext';
 
 // Screens
 import CollectionScreen from '../screens/CollectionScreen';
@@ -20,11 +23,29 @@ import AddProductScreen from '../screens/AddProductScreen';
 import EditProductScreen from '../screens/EditProductScreen';
 import ProductDetailsScreen from '../screens/ProductDetailsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import LoginScreen from '../screens/LoginScreen';
+import RegisterScreen from '../screens/RegisterScreen';
 
 // Create navigators
+const Root = createNativeStackNavigator<RootStackParamList>();
+const Auth = createNativeStackNavigator<AuthStackParamList>();
 const Tab = createBottomTabNavigator<RootTabParamList>();
 const CollectionStack = createNativeStackNavigator<CollectionStackParamList>();
 const WishlistStack = createNativeStackNavigator<WishlistStackParamList>();
+
+// Auth navigator
+const AuthNavigator = () => {
+  return (
+    <Auth.Navigator
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      <Auth.Screen name="Login" component={LoginScreen} />
+      <Auth.Screen name="Register" component={RegisterScreen} />
+    </Auth.Navigator>
+  );
+};
 
 // Collection stack navigator
 const CollectionNavigator = () => {
@@ -83,59 +104,74 @@ const WishlistNavigator = () => {
 };
 
 // Tab navigator
-export const AppNavigator = () => {
+const MainNavigator = () => {
   const { colors } = useTheme();
   
   return (
-    <NavigationContainer>
-      <Tab.Navigator
-        screenOptions={{
-          tabBarActiveTintColor: colors.primary,
-          tabBarInactiveTintColor: colors.secondaryText,
-          tabBarStyle: {
-            backgroundColor: colors.card,
-            borderTopColor: colors.border,
-          },
-          headerShown: false,
+    <Tab.Navigator
+      screenOptions={{
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.secondaryText,
+        tabBarStyle: {
+          backgroundColor: colors.card,
+          borderTopColor: colors.border,
+        },
+        headerShown: false,
+      }}
+    >
+      <Tab.Screen
+        name="Collection"
+        component={CollectionNavigator}
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="lipstick" size={size} color={color} />
+          ),
         }}
-      >
-        <Tab.Screen
-          name="Collection"
-          component={CollectionNavigator}
-          options={{
-            tabBarIcon: ({ color, size }) => (
-              <MaterialCommunityIcons name="lipstick" size={size} color={color} />
-            ),
-          }}
-        />
-        <Tab.Screen
-          name="Browser"
-          component={BrowserScreen}
-          options={{
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="search" size={size} color={color} />
-            ),
-          }}
-        />
-        <Tab.Screen
-          name="Wishlist"
-          component={WishlistNavigator}
-          options={{
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="heart-outline" size={size} color={color} />
-            ),
-          }}
-        />
-        <Tab.Screen
-          name="Profile"
-          component={ProfileScreen}
-          options={{
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="person-outline" size={size} color={color} />
-            ),
-          }}
-        />
-      </Tab.Navigator>
+      />
+      <Tab.Screen
+        name="Browser"
+        component={BrowserScreen}
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="search" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Wishlist"
+        component={WishlistNavigator}
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="heart-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Profile"
+        component={ProfileScreen}
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="person-outline" size={size} color={color} />
+          ),
+        }}
+      />
+    </Tab.Navigator>
+  );
+};
+
+// Root navigator
+export const AppNavigator = () => {
+  const { user } = useAuth();
+
+  return (
+    <NavigationContainer>
+      <Root.Navigator screenOptions={{ headerShown: false }}>
+        {user ? (
+          <Root.Screen name="Main" component={MainNavigator} />
+        ) : (
+          <Root.Screen name="Auth" component={AuthNavigator} />
+        )}
+      </Root.Navigator>
     </NavigationContainer>
   );
 };

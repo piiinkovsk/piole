@@ -65,10 +65,16 @@ const WishlistScreen: React.FC<WishlistScreenProps> = ({ navigation }) => {
     <View style={styles.emptyContainer}>
       <FontAwesome name="heart-o" size={64} color={colors.secondaryText} />
       <Text style={[styles.emptyTitle, { color: colors.text }]}>
-        Your wishlist is empty
+        {selectedCategory 
+          ? `No ${selectedCategory.toLowerCase()} products in your wishlist`
+          : 'Your wishlist is empty'
+        }
       </Text>
       <Text style={[styles.emptySubtitle, { color: colors.secondaryText }]}>
-        Add products to your wishlist for future purchases
+        {selectedCategory
+          ? `Add ${selectedCategory.toLowerCase()} products to your wishlist`
+          : 'Add products to your wishlist for future purchases'
+        }
       </Text>
       <TouchableOpacity
         style={[styles.emptyButton, { backgroundColor: colors.primary }]}
@@ -104,7 +110,7 @@ const WishlistScreen: React.FC<WishlistScreenProps> = ({ navigation }) => {
         onSelectCategory={handleCategorySelect}
       />
       
-      {filteredProducts.length === 0 && !searchQuery && !selectedCategory ? (
+      {filteredProducts.length === 0 && !searchQuery ? (
         renderEmptyState()
       ) : (
         <FlatList
@@ -124,7 +130,12 @@ const WishlistScreen: React.FC<WishlistScreenProps> = ({ navigation }) => {
           ListEmptyComponent={() => (
             <View style={styles.noResultsContainer}>
               <Text style={[styles.noResultsText, { color: colors.secondaryText }]}>
-                No products found
+                {searchQuery
+                  ? 'No products match your search'
+                  : selectedCategory
+                    ? `No ${selectedCategory.toLowerCase()} products found`
+                    : 'No products found'
+                }
               </Text>
             </View>
           )}

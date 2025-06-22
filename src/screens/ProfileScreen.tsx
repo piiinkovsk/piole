@@ -14,6 +14,7 @@ const ProfileScreen: React.FC = () => {
   const handleLogout = async () => {
     try {
       await logout();
+      // Navigation will be handled by the root navigator based on auth state
     } catch (error) {
       Alert.alert('Logout Failed', 'An error occurred during logout');
     }

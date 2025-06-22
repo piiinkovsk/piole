@@ -5,6 +5,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // Define theme types
 export type ThemeType = 'light' | 'dark' | 'system';
 
+// Define theme storage key
+const THEME_STORAGE_KEY = '@theme_preference';
+
 // Theme colors
 export const COLORS = {
   light: {
@@ -50,17 +53,20 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const systemTheme = useColorScheme() as 'light' | 'dark';
   const [theme, setThemeState] = useState<ThemeType>('system');
+  const [isLoaded, setIsLoaded] = useState(false);
   
   // Load saved theme preference
   useEffect(() => {
     const loadTheme = async () => {
       try {
-        const savedTheme = await AsyncStorage.getItem('@theme_preference');
+        const savedTheme = await AsyncStorage.getItem(THEME_STORAGE_KEY);
         if (savedTheme) {
           setThemeState(savedTheme as ThemeType);
         }
       } catch (error) {
         console.error('Failed to load theme preference:', error);
+      } finally {
+        setIsLoaded(true);
       }
     };
     
@@ -70,10 +76,12 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Save theme preference when changed
   const setTheme = async (newTheme: ThemeType) => {
     try {
-      await AsyncStorage.setItem('@theme_preference', newTheme);
+      await AsyncStorage.setItem(THEME_STORAGE_KEY, newTheme);
       setThemeState(newTheme);
     } catch (error) {
       console.error('Failed to save theme preference:', error);
+      // Revert theme state if save fails
+      setThemeState(theme);
     }
   };
   
@@ -89,6 +97,10 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setTheme,
     isDark,
   };
+  
+  if (!isLoaded) {
+    return null; // Or a loading indicator if preferred
+  }
   
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 };

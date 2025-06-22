@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   View, 
   Text, 
@@ -9,7 +9,10 @@ import {
   Image, 
   Switch,
   Alert,
-  Platform
+  Platform,
+  KeyboardAvoidingView,
+  TouchableWithoutFeedback,
+  Keyboard
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
@@ -28,15 +31,16 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({
 }) => {
   const { colors } = useTheme();
   const { dispatch } = useStoreContext();
-  const { isWishlist } = route.params;
+  const { isWishlist, previewData } = route.params;
+  const scrollViewRef = React.useRef<ScrollView>(null);
 
-  const [productName, setProductName] = useState('');
-  const [brand, setBrand] = useState('');
-  const [price, setPrice] = useState('');
-  const [category, setCategory] = useState<MainCategory>(MainCategory.OTHER);
-  const [imageUrl, setImageUrl] = useState('');
+  const [productName, setProductName] = useState(previewData?.name || '');
+  const [brand, setBrand] = useState(previewData?.brand || '');
+  const [price, setPrice] = useState(previewData?.price || '');
+  const [category, setCategory] = useState<MainCategory>(previewData?.mainCategory || MainCategory.OTHER);
+  const [imageUrl, setImageUrl] = useState(previewData?.imageUrl || '');
   const [notes, setNotes] = useState('');
-  const [purchaseLink, setPurchaseLink] = useState('');
+  const [purchaseLink, setPurchaseLink] = useState(previewData?.purchaseLink || '');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [expirationDate, setExpirationDate] = useState<Date | null>(null);
   const [isOpened, setIsOpened] = useState(false);
@@ -154,202 +158,228 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.closeButton}>
-          <Ionicons name="close" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>
-          Add to {isWishlist ? 'Wishlist' : 'Collection'}
-        </Text>
-        <TouchableOpacity onPress={handleSave} style={styles.saveButton}>
-          <Text style={[styles.saveButtonText, { color: colors.primary }]}>Save</Text>
-        </TouchableOpacity>
-      </View>
-      
-      <ScrollView style={styles.content}>
-        {/* Image Picker */}
-        <TouchableOpacity onPress={pickImage} style={styles.imagePickerContainer}>
-          {imageUrl ? (
-            <Image source={{ uri: imageUrl }} style={styles.productImage} />
-          ) : (
-            <View style={[styles.imagePlaceholder, { backgroundColor: colors.border }]}>
-              <Ionicons name="camera" size={40} color={colors.secondaryText} />
-              <Text style={[styles.imagePlaceholderText, { color: colors.secondaryText }]}>
-                Tap to add image
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardAvoidingView}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <ScrollView 
+            ref={scrollViewRef}
+            style={styles.scrollView}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={[styles.header, { borderBottomColor: colors.border }]}>
+              <TouchableOpacity onPress={() => navigation.goBack()} style={styles.closeButton}>
+                <Ionicons name="close" size={24} color={colors.text} />
+              </TouchableOpacity>
+              <Text style={[styles.headerTitle, { color: colors.text }]}>
+                Add to {isWishlist ? 'Wishlist' : 'Collection'}
               </Text>
+              <TouchableOpacity onPress={handleSave} style={styles.saveButton}>
+                <Text style={[styles.saveButtonText, { color: colors.primary }]}>Save</Text>
+              </TouchableOpacity>
             </View>
-          )}
-        </TouchableOpacity>
-        
-        {/* Basic Info Section */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Basic Information</Text>
-          
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: colors.secondaryText }]}>Product Name *</Text>
-            <TextInput
-              style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.card }]}
-              value={productName}
-              onChangeText={setProductName}
-              placeholder="Enter product name"
-              placeholderTextColor={colors.secondaryText}
-            />
-          </View>
-          
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: colors.secondaryText }]}>Brand *</Text>
-            <TextInput
-              style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.card }]}
-              value={brand}
-              onChangeText={setBrand}
-              placeholder="Enter brand name"
-              placeholderTextColor={colors.secondaryText}
-            />
-          </View>
-          
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: colors.secondaryText }]}>Price</Text>
-            <TextInput
-              style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.card }]}
-              value={price}
-              onChangeText={(text) => setPrice(text.replace(/[^0-9.]/g, ''))}
-              placeholder="Enter price (optional)"
-              placeholderTextColor={colors.secondaryText}
-              keyboardType="decimal-pad"
-            />
-          </View>
-          
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: colors.secondaryText }]}>Category</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScrollView}>
-              {Object.values(MainCategory).map((cat: string) => (
-                <TouchableOpacity
-                  key={cat}
-                  style={[
-                    styles.categoryChip,
-                    { borderColor: colors.border },
-                    category === cat && { backgroundColor: colors.primary }
-                  ]}
-                  onPress={() => setCategory(cat as MainCategory)}
-                >
-                  <Text
-                    style={[
-                      styles.categoryText,
-                      { color: category === cat ? 'white' : colors.text }
-                    ]}
-                  >
-                    {cat}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-          
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: colors.secondaryText }]}>Purchase Link</Text>
-            <TextInput
-              style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.card }]}
-              value={purchaseLink}
-              onChangeText={setPurchaseLink}
-              placeholder="Enter purchase link (optional)"
-              placeholderTextColor={colors.secondaryText}
-              keyboardType="url"
-              autoCapitalize="none"
-            />
-          </View>
-        </View>
-        
-        {/* Collection-specific fields */}
-        {!isWishlist && (
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Collection Details</Text>
             
-            <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: colors.secondaryText }]}>Expiration Date</Text>
-              <TouchableOpacity
-                style={[styles.dateButton, { borderColor: colors.border, backgroundColor: colors.card }]}
-                onPress={() => setShowDatePicker(true)}
-              >
-                <Text style={{ color: colors.text }}>{expirationDate ? formatDate(expirationDate) : 'Set expiration date'}</Text>
-                <Ionicons name="calendar" size={20} color={colors.secondaryText} />
+            <View style={styles.content}>
+              {/* Image Picker */}
+              <TouchableOpacity onPress={pickImage} style={styles.imagePickerContainer}>
+                {imageUrl ? (
+                  <Image source={{ uri: imageUrl }} style={styles.productImage} />
+                ) : (
+                  <View style={[styles.imagePlaceholder, { backgroundColor: colors.border }]}>
+                    <Ionicons name="camera" size={40} color={colors.secondaryText} />
+                    <Text style={[styles.imagePlaceholderText, { color: colors.secondaryText }]}>
+                      Tap to add image
+                    </Text>
+                  </View>
+                )}
               </TouchableOpacity>
               
-              {showDatePicker && (
-                <DateTimePicker
-                  value={expirationDate || new Date()}
-                  mode="date"
-                  display="default"
-                  onChange={handleDateChange}
-                />
-              )}
-            </View>
-            
-            <View style={styles.switchGroup}>
-              <Text style={[styles.label, { color: colors.secondaryText }]}>Opened</Text>
-              <Switch
-                value={isOpened}
-                onValueChange={setIsOpened}
-                trackColor={{ false: colors.border, true: colors.primary }}
-              />
-            </View>
-            
-            {isOpened && (
-              <>
+              {/* Basic Info Section */}
+              <View style={styles.section}>
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>Basic Information</Text>
+                
                 <View style={styles.inputGroup}>
-                  <Text style={[styles.label, { color: colors.secondaryText }]}>Opened Date</Text>
-                  <TouchableOpacity
-                    style={[styles.dateButton, { borderColor: colors.border, backgroundColor: colors.card }]}
-                    onPress={() => setShowOpenedDatePicker(true)}
-                  >
-                    <Text style={{ color: colors.text }}>{openedDate ? formatDate(openedDate) : 'Set opened date'}</Text>
-                    <Ionicons name="calendar" size={20} color={colors.secondaryText} />
-                  </TouchableOpacity>
-                  
-                  {showOpenedDatePicker && (
-                    <DateTimePicker
-                      value={openedDate || new Date()}
-                      mode="date"
-                      display="default"
-                      onChange={handleOpenedDateChange}
-                    />
-                  )}
+                  <Text style={[styles.label, { color: colors.secondaryText }]}>Product Name *</Text>
+                  <TextInput
+                    style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.card }]}
+                    value={productName}
+                    onChangeText={setProductName}
+                    placeholder="Enter product name"
+                    placeholderTextColor={colors.secondaryText}
+                  />
                 </View>
                 
                 <View style={styles.inputGroup}>
-                  <Text style={[styles.label, { color: colors.secondaryText }]}>Period After Opening (months)</Text>
+                  <Text style={[styles.label, { color: colors.secondaryText }]}>Brand *</Text>
                   <TextInput
                     style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.card }]}
-                    value={periodAfterOpening}
-                    onChangeText={(text) => setPeriodAfterOpening(text.replace(/[^0-9]/g, ''))}
-                    placeholder="Enter PAO in months (e.g., 12)"
+                    value={brand}
+                    onChangeText={setBrand}
+                    placeholder="Enter brand name"
                     placeholderTextColor={colors.secondaryText}
-                    keyboardType="number-pad"
                   />
                 </View>
-              </>
-            )}
-          </View>
-        )}
-        
-        {/* Notes Section */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Notes</Text>
-          <TextInput
-            style={[
-              styles.input, 
-              styles.textArea, 
-              { color: colors.text, borderColor: colors.border, backgroundColor: colors.card }
-            ]}
-            value={notes}
-            onChangeText={setNotes}
-            placeholder="Enter any notes about this product"
-            placeholderTextColor={colors.secondaryText}
-            multiline
-            textAlignVertical="top"
-          />
-        </View>
-      </ScrollView>
+                
+                <View style={styles.inputGroup}>
+                  <Text style={[styles.label, { color: colors.secondaryText }]}>Price</Text>
+                  <TextInput
+                    style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.card }]}
+                    value={price}
+                    onChangeText={(text) => setPrice(text.replace(/[^0-9.]/g, ''))}
+                    placeholder="Enter price (optional)"
+                    placeholderTextColor={colors.secondaryText}
+                    keyboardType="decimal-pad"
+                  />
+                </View>
+                
+                <View style={styles.inputGroup}>
+                  <Text style={[styles.label, { color: colors.secondaryText }]}>Category</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScrollView}>
+                    {Object.values(MainCategory).map((cat: string) => (
+                      <TouchableOpacity
+                        key={cat}
+                        style={[
+                          styles.categoryChip,
+                          { borderColor: colors.border },
+                          category === cat && { backgroundColor: colors.primary }
+                        ]}
+                        onPress={() => setCategory(cat as MainCategory)}
+                      >
+                        <Text
+                          style={[
+                            styles.categoryText,
+                            { color: category === cat ? 'white' : colors.text }
+                          ]}
+                        >
+                          {cat}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+                
+                <View style={styles.inputGroup}>
+                  <Text style={[styles.label, { color: colors.secondaryText }]}>Purchase Link</Text>
+                  <TextInput
+                    style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.card }]}
+                    value={purchaseLink}
+                    onChangeText={setPurchaseLink}
+                    placeholder="Enter purchase link (optional)"
+                    placeholderTextColor={colors.secondaryText}
+                    keyboardType="url"
+                    autoCapitalize="none"
+                  />
+                </View>
+              </View>
+              
+              {/* Collection-specific fields */}
+              {!isWishlist && (
+                <View style={styles.section}>
+                  <Text style={[styles.sectionTitle, { color: colors.text }]}>Collection Details</Text>
+                  
+                  <View style={styles.inputGroup}>
+                    <Text style={[styles.label, { color: colors.secondaryText }]}>Expiration Date</Text>
+                    <TouchableOpacity
+                      style={[styles.dateButton, { borderColor: colors.border, backgroundColor: colors.card }]}
+                      onPress={() => setShowDatePicker(true)}
+                    >
+                      <Text style={{ color: colors.text }}>{expirationDate ? formatDate(expirationDate) : 'Set expiration date'}</Text>
+                      <Ionicons name="calendar" size={20} color={colors.secondaryText} />
+                    </TouchableOpacity>
+                    
+                    {showDatePicker && (
+                      <DateTimePicker
+                        value={expirationDate || new Date()}
+                        mode="date"
+                        display="default"
+                        onChange={handleDateChange}
+                      />
+                    )}
+                  </View>
+                  
+                  <View style={styles.switchGroup}>
+                    <Text style={[styles.label, { color: colors.secondaryText }]}>Opened</Text>
+                    <Switch
+                      value={isOpened}
+                      onValueChange={setIsOpened}
+                      trackColor={{ false: colors.border, true: colors.primary }}
+                    />
+                  </View>
+                  
+                  {isOpened && (
+                    <>
+                      <View style={styles.inputGroup}>
+                        <Text style={[styles.label, { color: colors.secondaryText }]}>Opened Date</Text>
+                        <TouchableOpacity
+                          style={[styles.dateButton, { borderColor: colors.border, backgroundColor: colors.card }]}
+                          onPress={() => setShowOpenedDatePicker(true)}
+                        >
+                          <Text style={{ color: colors.text }}>{openedDate ? formatDate(openedDate) : 'Set opened date'}</Text>
+                          <Ionicons name="calendar" size={20} color={colors.secondaryText} />
+                        </TouchableOpacity>
+                        
+                        {showOpenedDatePicker && (
+                          <DateTimePicker
+                            value={openedDate || new Date()}
+                            mode="date"
+                            display="default"
+                            onChange={handleOpenedDateChange}
+                          />
+                        )}
+                      </View>
+                      
+                      <View style={styles.inputGroup}>
+                        <Text style={[styles.label, { color: colors.secondaryText }]}>Period After Opening (months)</Text>
+                        <TextInput
+                          style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.card }]}
+                          value={periodAfterOpening}
+                          onChangeText={(text) => setPeriodAfterOpening(text.replace(/[^0-9]/g, ''))}
+                          placeholder="Enter PAO in months (e.g., 12)"
+                          placeholderTextColor={colors.secondaryText}
+                          keyboardType="number-pad"
+                        />
+                      </View>
+                    </>
+                  )}
+                </View>
+              )}
+              
+              {/* Notes Section */}
+              <View style={styles.section}>
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>Notes</Text>
+                <TextInput
+                  style={[
+                    styles.input, 
+                    styles.textArea, 
+                    { color: colors.text, borderColor: colors.border, backgroundColor: colors.card }
+                  ]}
+                  value={notes}
+                  onChangeText={setNotes}
+                  placeholder="Enter any notes about this product"
+                  placeholderTextColor={colors.secondaryText}
+                  multiline
+                  textAlignVertical="top"
+                  numberOfLines={4}
+                  returnKeyType="default"
+                  blurOnSubmit={false}
+                  onFocus={() => {
+                    // Slight delay to ensure the scroll happens after the keyboard appears
+                    setTimeout(() => {
+                      scrollViewRef.current?.scrollToEnd({ animated: true });
+                    }, 100);
+                  }}
+                />
+              </View>
+              
+              {/* Add bottom spacing to ensure the notes section is fully visible */}
+              <View style={{ height: 40 }} />
+            </View>
+          </ScrollView>
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -383,6 +413,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: 16,
+    paddingBottom: Platform.OS === 'ios' ? 120 : 90, // Add extra padding at bottom
   },
   imagePickerContainer: {
     width: '100%',
@@ -429,7 +460,9 @@ const styles = StyleSheet.create({
   },
   textArea: {
     minHeight: 100,
+    maxHeight: 200,
     paddingTop: 12,
+    textAlignVertical: 'top',
   },
   categoryScrollView: {
     flexDirection: 'row',
@@ -459,6 +492,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
+  },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
+  scrollView: {
+    flex: 1,
   },
 });
 

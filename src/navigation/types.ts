@@ -1,6 +1,18 @@
+import { CollectionProduct, WishlistProduct, MainCategory } from '../types/product';
 import { NavigatorScreenParams } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { CollectionProduct, WishlistProduct } from '../types/product';
+
+// Auth navigation params
+export type AuthStackParamList = {
+  Login: undefined;
+  Register: undefined;
+};
+
+// Root navigation params
+export type RootStackParamList = {
+  Auth: NavigatorScreenParams<AuthStackParamList>;
+  Main: NavigatorScreenParams<RootTabParamList>;
+};
 
 // Stack navigation params
 export type CollectionStackParamList = {
@@ -11,6 +23,14 @@ export type CollectionStackParamList = {
   };
   AddProduct: {
     isWishlist?: false;
+    previewData?: {
+      name?: string;
+      brand?: string;
+      imageUrl?: string;
+      price?: string;
+      mainCategory?: MainCategory;
+      purchaseLink?: string;
+    };
   };
   EditProduct: {
     product: CollectionProduct;
@@ -26,6 +46,14 @@ export type WishlistStackParamList = {
   };
   AddProduct: {
     isWishlist: true;
+    previewData?: {
+      name?: string;
+      brand?: string;
+      imageUrl?: string;
+      price?: string;
+      mainCategory?: MainCategory;
+      purchaseLink?: string;
+    };
   };
   EditProduct: {
     product: WishlistProduct;
@@ -46,6 +74,8 @@ export type CollectionScreenProps = NativeStackScreenProps<CollectionStackParamL
 export type WishlistScreenProps = NativeStackScreenProps<WishlistStackParamList, 'WishlistHome'>;
 export type BrowserScreenProps = NativeStackScreenProps<RootTabParamList, 'Browser'>;
 export type ProfileScreenProps = NativeStackScreenProps<RootTabParamList, 'Profile'>;
+export type LoginScreenProps = NativeStackScreenProps<AuthStackParamList, 'Login'>;
+export type RegisterScreenProps = NativeStackScreenProps<AuthStackParamList, 'Register'>;
 
 export type ProductDetailsScreenProps = 
   | NativeStackScreenProps<CollectionStackParamList, 'ProductDetails'>
