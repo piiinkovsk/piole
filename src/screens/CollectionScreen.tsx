@@ -1,115 +1,31 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome, Ionicons } from '@expo/vector-icons';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { useTheme } from '../store/ThemeContext';
+import { useStore } from '../store/StoreContext';
 import { MainCategory, CollectionProduct } from '../types/product';
+import { CollectionStackParamList } from '../navigation/types';
 import ProductCard from '../components/molecules/ProductCard';
 import CategoryFilter from '../components/molecules/CategoryFilter';
 
-// Mock data for collection products
-const MOCK_COLLECTION_PRODUCTS: CollectionProduct[] = [
-  {
-    id: '1',
-    name: 'Hydrating Serum',
-    brand: 'The Ordinary',
-    mainCategory: MainCategory.SKINCARE,
-    subCategories: ['serum', 'hydrating'],
-    imageUrl: 'https://picsum.photos/200',
-    expirationDate: '2025-12-31',
-    createdAt: '2024-05-15T10:30:00Z',
-    updatedAt: '2024-05-15T10:30:00Z',
-  },
-  {
-    id: '2',
-    name: 'Liquid Lipstick',
-    brand: 'Fenty Beauty',
-    mainCategory: MainCategory.MAKEUP,
-    subCategories: ['lips', 'liquid-lipstick'],
-    imageUrl: 'https://picsum.photos/201',
-    expirationDate: '2026-03-15',
-    createdAt: '2024-06-10T14:20:00Z',
-    updatedAt: '2024-06-10T14:20:00Z',
-  },
-  {
-    id: '3',
-    name: 'Volumizing Mascara',
-    brand: 'Maybelline',
-    mainCategory: MainCategory.MAKEUP,
-    subCategories: ['eyes', 'mascara'],
-    imageUrl: 'https://picsum.photos/202',
-    expirationDate: '2025-08-25',
-    createdAt: '2024-05-20T09:15:00Z',
-    updatedAt: '2024-05-20T09:15:00Z',
-  },
-  {
-    id: '4',
-    name: 'Hair Oil Treatment',
-    brand: 'Olaplex',
-    mainCategory: MainCategory.HAIRCARE,
-    subCategories: ['treatment', 'oil'],
-    imageUrl: 'https://picsum.photos/203',
-    createdAt: '2024-06-05T16:45:00Z',
-    updatedAt: '2024-06-05T16:45:00Z',
-  },
-  {
-    id: '5',
-    name: 'Perfume No.5',
-    brand: 'Chanel',
-    mainCategory: MainCategory.PERFUME,
-    subCategories: ['eau-de-parfum'],
-    imageUrl: 'https://picsum.photos/204',
-    expirationDate: '2028-01-10',
-    createdAt: '2024-04-12T11:30:00Z',
-    updatedAt: '2024-04-12T11:30:00Z',
-  },
-  {
-    id: '6',
-    name: 'Body Lotion',
-    brand: 'Sol de Janeiro',
-    mainCategory: MainCategory.BODYCARE,
-    subCategories: ['lotion', 'moisturizer'],
-    imageUrl: 'https://picsum.photos/205',
-    expirationDate: '2026-07-20',
-    createdAt: '2024-05-30T13:10:00Z',
-    updatedAt: '2024-05-30T13:10:00Z',
-  },
-];
 
-const CollectionScreen: React.FC = () => {
+
+type Props = NativeStackScreenProps<CollectionStackParamList, 'CollectionHome'>;
+
+const CollectionScreen: React.FC<Props> = ({ navigation }) => {
   const { colors } = useTheme();
-  const [products, setProducts] = useState<CollectionProduct[]>([]);
-  const [filteredProducts, setFilteredProducts] = useState<CollectionProduct[]>([]);
+  const { state } = useStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<MainCategory | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  
-  // Load products on component mount
-  useEffect(() => {
-    // Simulate API call to fetch products
-    const fetchProducts = async () => {
-      try {
-        setIsLoading(true);
-        // In a real app, this would be an API call
-        // For now, we'll just use the mock data
-        setTimeout(() => {
-          setProducts(MOCK_COLLECTION_PRODUCTS);
-          setFilteredProducts(MOCK_COLLECTION_PRODUCTS);
-          setIsLoading(false);
-        }, 1000);
-      } catch (error) {
-        console.error('Error fetching products:', error);
-        setIsLoading(false);
-      }
-    };
-    
-    fetchProducts();
-  }, []);
+  const [filteredProducts, setFilteredProducts] = useState<CollectionProduct[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   
   // Filter products based on search query and selected category
   useEffect(() => {
-    let filtered = products;
+    let filtered = state.collection;
     
     // Apply category filter
     if (selectedCategory) {
@@ -127,20 +43,28 @@ const CollectionScreen: React.FC = () => {
     }
     
     setFilteredProducts(filtered);
-  }, [selectedCategory, searchQuery, products]);
+  }, [selectedCategory, searchQuery, state.collection]);
   
   // Handle category selection
-  const handleCategorySelect = (category: MainCategory | null) => {
+  const handleCategorySelect = useCallback((category: MainCategory | null) => {
     setSelectedCategory(category);
-  };
+  }, []);
   
   // Handle search
-  const handleSearch = (text: string) => {
+  const handleSearch = useCallback((text: string) => {
     setSearchQuery(text);
-  };
+  }, []);
+  
+  // Handle product selection
+  const handleProductPress = useCallback((product: CollectionProduct) => {
+    navigation.navigate('ProductDetails', {
+      product,
+      isWishlist: false
+    });
+  }, [navigation]);
   
   // Render empty state
-  const renderEmptyState = () => (
+  const renderEmptyState = useCallback(() => (
     <View style={styles.emptyContainer}>
       <FontAwesome name="shopping-bag" size={64} color={colors.secondaryText} />
       <Text style={[styles.emptyTitle, { color: colors.text }]}>
@@ -151,22 +75,22 @@ const CollectionScreen: React.FC = () => {
       </Text>
       <TouchableOpacity
         style={[styles.emptyButton, { backgroundColor: colors.primary }]}
-        onPress={() => {}}
+        onPress={() => navigation.navigate('AddProduct', { isWishlist: false })}
       >
         <Text style={styles.emptyButtonText}>Add Product</Text>
       </TouchableOpacity>
     </View>
-  );
+  ), [colors, navigation]);
   
   // Render loading state
-  const renderLoadingState = () => (
+  const renderLoadingState = useCallback(() => (
     <View style={styles.loadingContainer}>
       <ActivityIndicator size="large" color={colors.primary} />
       <Text style={[styles.loadingText, { color: colors.text }]}>
         Loading your collection...
       </Text>
     </View>
-  );
+  ), [colors]);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
@@ -202,7 +126,11 @@ const CollectionScreen: React.FC = () => {
           data={filteredProducts}
           keyExtractor={item => item.id}
           renderItem={({ item }) => (
-            <ProductCard product={item} />
+            <ProductCard
+              product={item}
+              onPress={() => handleProductPress(item)}
+              isWishlist={false}
+            />
           )}
           numColumns={2}
           columnWrapperStyle={styles.columnWrapper}
@@ -213,7 +141,7 @@ const CollectionScreen: React.FC = () => {
       
       <TouchableOpacity
         style={[styles.addButton, { backgroundColor: colors.primary }]}
-        onPress={() => {}}
+        onPress={() => navigation.navigate('AddProduct', { isWishlist: false })}
       >
         <Ionicons name="add" size={24} color="white" />
       </TouchableOpacity>

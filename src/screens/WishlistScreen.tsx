@@ -1,98 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome, Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '../store/ThemeContext';
+import { useStoreContext } from '../store/StoreContext';
 import { MainCategory, WishlistProduct } from '../types/product';
+import { WishlistScreenProps } from '../navigation/types';
 import ProductCard from '../components/molecules/ProductCard';
 import CategoryFilter from '../components/molecules/CategoryFilter';
 
-// Mock data for wishlist products
-const MOCK_WISHLIST_PRODUCTS: WishlistProduct[] = [
-  {
-    id: '1',
-    name: 'Rose Facial Spray',
-    brand: 'Mario Badescu',
-    mainCategory: MainCategory.SKINCARE,
-    subCategories: ['facial-spray', 'toner'],
-    imageUrl: 'https://picsum.photos/300',
-    price: 7.99,
-    createdAt: '2024-05-10T10:30:00Z',
-    updatedAt: '2024-05-10T10:30:00Z',
-    priority: 'medium',
-  },
-  {
-    id: '2',
-    name: 'Translucent Setting Powder',
-    brand: 'Laura Mercier',
-    mainCategory: MainCategory.MAKEUP,
-    subCategories: ['face', 'powder'],
-    imageUrl: 'https://picsum.photos/301',
-    price: 39.99,
-    createdAt: '2024-06-05T14:20:00Z',
-    updatedAt: '2024-06-05T14:20:00Z',
-    priority: 'high',
-  },
-  {
-    id: '3',
-    name: 'Lip Balm',
-    brand: 'Laneige',
-    mainCategory: MainCategory.MAKEUP,
-    subCategories: ['lips', 'lip-balm'],
-    imageUrl: 'https://picsum.photos/302',
-    price: 22.00,
-    createdAt: '2024-05-15T09:15:00Z',
-    updatedAt: '2024-05-15T09:15:00Z',
-    priority: 'low',
-  },
-  {
-    id: '4',
-    name: 'Bond Repair Treatment',
-    brand: 'Olaplex',
-    mainCategory: MainCategory.HAIRCARE,
-    subCategories: ['treatment', 'repair'],
-    imageUrl: 'https://picsum.photos/303',
-    price: 28.00,
-    createdAt: '2024-06-01T16:45:00Z',
-    updatedAt: '2024-06-01T16:45:00Z',
-    priority: 'medium',
-  },
-];
-
-const WishlistScreen: React.FC = () => {
+const WishlistScreen: React.FC<WishlistScreenProps> = ({ navigation }) => {
   const { colors } = useTheme();
-  const [products, setProducts] = useState<WishlistProduct[]>([]);
-  const [filteredProducts, setFilteredProducts] = useState<WishlistProduct[]>([]);
+  const { state } = useStoreContext();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<MainCategory | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+
+  const [filteredProducts, setFilteredProducts] = useState(state.wishlist);
   
-  // Load products on component mount
+  // Update filtered products when wishlist, search query, or category changes
   useEffect(() => {
-    // Simulate API call to fetch products
-    const fetchProducts = async () => {
-      try {
-        setIsLoading(true);
-        // In a real app, this would be an API call
-        // For now, we'll just use the mock data
-        setTimeout(() => {
-          setProducts(MOCK_WISHLIST_PRODUCTS);
-          setFilteredProducts(MOCK_WISHLIST_PRODUCTS);
-          setIsLoading(false);
-        }, 1000);
-      } catch (error) {
-        console.error('Error fetching wishlist products:', error);
-        setIsLoading(false);
-      }
-    };
-    
-    fetchProducts();
-  }, []);
-  
-  // Filter products based on search query and selected category
-  useEffect(() => {
-    let filtered = products;
+    let filtered = state.wishlist;
     
     // Apply category filter
     if (selectedCategory) {
@@ -110,7 +38,7 @@ const WishlistScreen: React.FC = () => {
     }
     
     setFilteredProducts(filtered);
-  }, [selectedCategory, searchQuery, products]);
+  }, [selectedCategory, searchQuery, state.wishlist]);
   
   // Handle category selection
   const handleCategorySelect = (category: MainCategory | null) => {
@@ -120,6 +48,16 @@ const WishlistScreen: React.FC = () => {
   // Handle search
   const handleSearch = (text: string) => {
     setSearchQuery(text);
+  };
+  
+  // Navigate to add product
+  const handleAddProduct = () => {
+    navigation.navigate('AddProduct', { isWishlist: true });
+  };
+  
+  // Navigate to product details
+  const handleProductPress = (product: WishlistProduct) => {
+    navigation.navigate('ProductDetails', { product, isWishlist: true });
   };
   
   // Render empty state
@@ -134,20 +72,10 @@ const WishlistScreen: React.FC = () => {
       </Text>
       <TouchableOpacity
         style={[styles.emptyButton, { backgroundColor: colors.primary }]}
-        onPress={() => {}}
+        onPress={handleAddProduct}
       >
         <Text style={styles.emptyButtonText}>Add Product</Text>
       </TouchableOpacity>
-    </View>
-  );
-  
-  // Render loading state
-  const renderLoadingState = () => (
-    <View style={styles.loadingContainer}>
-      <ActivityIndicator size="large" color={colors.primary} />
-      <Text style={[styles.loadingText, { color: colors.text }]}>
-        Loading your wishlist...
-      </Text>
     </View>
   );
 
@@ -176,27 +104,36 @@ const WishlistScreen: React.FC = () => {
         onSelectCategory={handleCategorySelect}
       />
       
-      {isLoading ? (
-        renderLoadingState()
-      ) : filteredProducts.length === 0 ? (
+      {filteredProducts.length === 0 && !searchQuery && !selectedCategory ? (
         renderEmptyState()
       ) : (
         <FlatList
           data={filteredProducts}
           keyExtractor={item => item.id}
           renderItem={({ item }) => (
-            <ProductCard product={item} isWishlist />
+            <ProductCard 
+              product={item} 
+              isWishlist
+              onPress={() => handleProductPress(item)}
+            />
           )}
           numColumns={2}
           columnWrapperStyle={styles.columnWrapper}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          ListEmptyComponent={() => (
+            <View style={styles.noResultsContainer}>
+              <Text style={[styles.noResultsText, { color: colors.secondaryText }]}>
+                No products found
+              </Text>
+            </View>
+          )}
         />
       )}
       
       <TouchableOpacity
         style={[styles.addButton, { backgroundColor: colors.primary }]}
-        onPress={() => {}}
+        onPress={handleAddProduct}
       >
         <Ionicons name="add" size={24} color="white" />
       </TouchableOpacity>
@@ -210,7 +147,7 @@ const styles = StyleSheet.create({
   },
   searchContainer: {
     paddingHorizontal: 16,
-    paddingVertical: 4, // Reduced from 8
+    paddingVertical: 4,
   },
   searchBar: {
     flexDirection: 'row',
@@ -230,7 +167,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: 8,
-    paddingBottom: 80, // Extra padding for FAB
+    paddingBottom: 80,
   },
   columnWrapper: {
     justifyContent: 'space-between',
@@ -263,6 +200,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
+  noResultsContainer: {
+    padding: 16,
+    alignItems: 'center',
+  },
+  noResultsText: {
+    fontSize: 16,
+  },
   addButton: {
     position: 'absolute',
     bottom: 24,
@@ -277,15 +221,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
   },
 });
 

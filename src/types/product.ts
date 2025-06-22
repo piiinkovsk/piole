@@ -40,6 +40,7 @@ export interface CollectionProduct extends BaseProduct {
   expirationDate?: string; // ISO date string
   isOpened?: boolean;
   openedDate?: string; // ISO date string
+  periodAfterOpening?: number; // months
   rating?: number; // 1-5 rating
   usage?: 'daily' | 'weekly' | 'monthly' | 'rarely';
   notes?: string;
