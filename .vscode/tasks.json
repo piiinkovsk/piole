@@ -1,0 +1,13 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Start Expo",
+			"type": "shell",
+			"command": "cd /Users/waitwaitwaitasec/Piole/piole && npm start",
+			"group": "build",
+			"problemMatcher": [],
+			"isBackground": true
+		}
+	]
+}
