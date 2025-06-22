@@ -42,6 +42,21 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, isWishlist = false, 
     return 'priority' in product;
   };
 
+  // Get wishlist priority text and color
+  const getWishlistPriority = (product: WishlistProduct) => {
+    if (!product.priority) return { text: 'Low', color: colors.secondaryText };
+    
+    switch (product.priority) {
+      case 'high':
+        return { text: 'High Priority', color: colors.error };
+      case 'medium':
+        return { text: 'Medium', color: colors.primaryDark };
+      case 'low':
+      default:
+        return { text: 'Low', color: colors.secondaryText };
+    }
+  };
+
   return (
     <TouchableOpacity
       style={[styles.container, { backgroundColor: colors.card, borderColor: colors.border }]}
@@ -85,26 +100,22 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, isWishlist = false, 
             >
               {formatExpirationDate(product.expirationDate)}
             </Text>
-          ) : isWishlistProduct(product) && product.price ? (
-            <Text style={[styles.price, { color: colors.primary }]}>
-              {formatPrice(product.price)}
-            </Text>
+          ) : isWishlistProduct(product) ? (
+            <View style={styles.footerContent}>
+              {product.price ? (
+                <Text style={[styles.price, { color: colors.primary }]}>
+                  {formatPrice(product.price)}
+                </Text>
+              ) : null}
+              <Text style={[
+                styles.priorityText,
+                { color: getWishlistPriority(product).color }
+              ]}>
+                {getWishlistPriority(product).text}
+              </Text>
+            </View>
           ) : (
             <View />
-          )}
-          
-          {isWishlist ? (
-            <View style={[styles.priorityIndicator, { 
-              backgroundColor: isWishlistProduct(product) && product.priority === 'high' 
-                ? colors.error 
-                : isWishlistProduct(product) && product.priority === 'medium'
-                ? colors.primaryDark
-                : colors.secondaryText
-            }]} />
-          ) : (
-            <TouchableOpacity style={styles.moreButton}>
-              <MaterialIcons name="more-vert" size={18} color={colors.secondaryText} />
-            </TouchableOpacity>
           )}
         </View>
       </View>
@@ -146,6 +157,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  footerContent: {
+    flex: 1,
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    gap: 4,
+  },
   expiration: {
     fontSize: 10,
   },
@@ -153,13 +170,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  priorityIndicator: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  moreButton: {
-    padding: 2,
+  priorityText: {
+    fontSize: 12,
+    fontWeight: '500',
   },
 });
 

@@ -1,31 +1,26 @@
 import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { useColorScheme } from 'react-native';
-import { QueryClient, QueryClientProvider } from 'react-query';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-import AuthNavigator from './src/navigation/AuthNavigator';
-import { AuthProvider } from './src/store/AuthContext';
 import { ThemeProvider } from './src/store/ThemeContext';
-
-const queryClient = new QueryClient();
+import { StoreProvider } from './src/store/StoreContext';
+import { AuthProvider } from './src/store/AuthContext';
+import { AppNavigator } from './src/navigation/AppNavigator';
 
 export default function App() {
-  const colorScheme = useColorScheme();
-
   return (
-    <QueryClientProvider client={queryClient}>
+    <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <ThemeProvider>
-          <AuthProvider>
-            <NavigationContainer>
+        <AuthProvider>
+          <ThemeProvider>
+            <StoreProvider>
               <StatusBar style="auto" />
-              <AuthNavigator />
-            </NavigationContainer>
-          </AuthProvider>
-        </ThemeProvider>
+              <AppNavigator />
+            </StoreProvider>
+          </ThemeProvider>
+        </AuthProvider>
       </SafeAreaProvider>
-    </QueryClientProvider>
+    </GestureHandlerRootView>
   );
 }
