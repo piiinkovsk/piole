@@ -68,7 +68,7 @@ const CategoryFilter: React.FC<CategoryFilterProps> = ({ selectedCategory, onSel
 const styles = StyleSheet.create({
   container: {
     borderBottomWidth: 1,
-    paddingVertical: 8,
+    paddingVertical: 4, // Reduced from 8
   },
   scrollContent: {
     paddingHorizontal: 16,

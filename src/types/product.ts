@@ -2,7 +2,6 @@
 
 // Main categories
 export enum MainCategory {
-  ALL = 'All Products',
   MAKEUP = 'Makeup',
   SKINCARE = 'Skincare',
   HAIRCARE = 'Haircare',

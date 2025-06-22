@@ -210,7 +210,7 @@ const styles = StyleSheet.create({
   },
   searchContainer: {
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 4, // Reduced from 8
   },
   searchBar: {
     flexDirection: 'row',
