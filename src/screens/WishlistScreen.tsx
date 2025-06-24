@@ -162,14 +162,14 @@ const InternalFilterModal: React.FC<FilterModalProps> = ({
   );
 };
 
-type Props = NativeStackScreenProps<WishlistStackParamList, 'WishlistHome'>;
+export type WishlistScreenProps = NativeStackScreenProps<WishlistStackParamList, 'WishlistHome'>;
 
-const WishlistScreen: React.FC<Props> = ({ navigation }) => {
+const WishlistScreen: React.FC<WishlistScreenProps> = ({ navigation }) => {
   const { colors } = useTheme();
   const { state } = useStoreContext();
+  const [showFilterModal, setShowFilterModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<MainCategory | null>(null);
-  const [showFilterModal, setShowFilterModal] = useState(false);
   const [filters, setFilters] = useState<ProductFilters>({});
   const [filteredProducts, setFilteredProducts] = useState(state.wishlist);
 
@@ -237,26 +237,28 @@ const WishlistScreen: React.FC<Props> = ({ navigation }) => {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <View style={styles.header}>
-        {/* Search and filter button */}
+        <Text style={[styles.headerTitle, { color: colors.text }]}>My Wishlist</Text>
         <View style={styles.searchContainer}>
           <TextInput
-            style={[styles.searchInput, { color: colors.text, borderColor: colors.border }]}
-            placeholder="Search products..."
-            placeholderTextColor={colors.secondaryText}
+            style={[styles.searchInput, { 
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+              color: colors.text
+            }]}
             value={searchQuery}
             onChangeText={setSearchQuery}
+            placeholder="Search products..."
+            placeholderTextColor={colors.secondaryText}
           />
           <TouchableOpacity
-            style={styles.filterButton}
+            style={[styles.filterButton, { borderColor: colors.border }]}
             onPress={() => setShowFilterModal(true)}
           >
-            <FontAwesome name="filter" size={20} color={colors.text} />
+            <FontAwesome name="sliders" size={20} color={colors.text} />
           </TouchableOpacity>
         </View>
-
-        {/* Quick category filter */}
-        <ScrollView 
-          horizontal 
+        <ScrollView
+          horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.categoryScrollView}
         >
@@ -311,7 +313,8 @@ const WishlistScreen: React.FC<Props> = ({ navigation }) => {
               isWishlist: true 
             })}
           />
-        )}
+        )
+        }
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.productList}
         ListEmptyComponent={
@@ -340,6 +343,11 @@ const styles = StyleSheet.create({
   header: {
     padding: 16,
     paddingBottom: 8,
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    marginBottom: 16,
   },
   searchContainer: {
     flexDirection: 'row',

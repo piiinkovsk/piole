@@ -15,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome, Ionicons, MaterialIcons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import MultiLevelCategoryFilter from '../components/molecules/MultiLevelCategoryFilter';
 
 import { useTheme } from '../store/ThemeContext';
@@ -164,14 +164,14 @@ const InternalFilterModal: React.FC<FilterModalProps> = ({
   );
 };
 
-type Props = NativeStackScreenProps<CollectionStackParamList, 'CollectionHome'>;
+export type CollectionScreenProps = NativeStackScreenProps<CollectionStackParamList, 'CollectionHome'>;
 
-const CollectionScreen: React.FC<Props> = ({ navigation }) => {
+const CollectionScreen: React.FC<CollectionScreenProps> = ({ navigation }) => {
   const { colors } = useTheme();
   const { state } = useStoreContext();
+  const [showFilterModal, setShowFilterModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<MainCategory | null>(null);
-  const [showFilterModal, setShowFilterModal] = useState(false);
   const [filters, setFilters] = useState<ProductFilters>({});
   const [filteredProducts, setFilteredProducts] = useState(state.collection);
 
@@ -239,26 +239,28 @@ const CollectionScreen: React.FC<Props> = ({ navigation }) => {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <View style={styles.header}>
-        {/* Search and filter button */}
+        <Text style={[styles.headerTitle, { color: colors.text }]}>My Collection</Text>
         <View style={styles.searchContainer}>
           <TextInput
-            style={[styles.searchInput, { color: colors.text, borderColor: colors.border }]}
-            placeholder="Search your collection..."
-            placeholderTextColor={colors.secondaryText}
+            style={[styles.searchInput, { 
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+              color: colors.text
+            }]}
             value={searchQuery}
             onChangeText={setSearchQuery}
+            placeholder="Search products..."
+            placeholderTextColor={colors.secondaryText}
           />
           <TouchableOpacity
-            style={styles.filterButton}
+            style={[styles.filterButton, { borderColor: colors.border }]}
             onPress={() => setShowFilterModal(true)}
           >
-            <FontAwesome name="filter" size={20} color={colors.text} />
+            <FontAwesome name="sliders" size={20} color={colors.text} />
           </TouchableOpacity>
         </View>
-
-        {/* Quick category filter */}
-        <ScrollView 
-          horizontal 
+        <ScrollView
+          horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.categoryScrollView}
         >
@@ -339,6 +341,11 @@ const styles = StyleSheet.create({
   header: {
     padding: 16,
     paddingBottom: 8,
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    marginBottom: 16,
   },
   searchContainer: {
     flexDirection: 'row',
