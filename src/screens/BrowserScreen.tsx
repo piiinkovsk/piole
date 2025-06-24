@@ -10,7 +10,7 @@ import {
   Text,
   ScrollView,
   KeyboardAvoidingView,
-  Platform,
+  Platform
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,6 +19,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { CompositeNavigationProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import ChipCategorySelector from '../components/molecules/ChipCategorySelector';
 
 import { useTheme } from '../store/ThemeContext';
 import { MainCategory, CategoryPath } from '../types/product';
@@ -42,7 +43,7 @@ interface PreviewData {
 interface QuickAddModalProps {
   visible: boolean;
   onClose: () => void;
-  onSave: () => void;
+  onSave: (data: PreviewData & { categoryPath: CategoryPath[] }) => void;
   previewData: PreviewData;
   isWishlist: boolean;
 }
@@ -62,32 +63,51 @@ const QuickAddModal: React.FC<QuickAddModalProps> = ({
   isWishlist 
 }) => {
   const { colors } = useTheme();
-  const { dispatch } = useStoreContext();
   const [name, setName] = useState(previewData?.name || '');
   const [brand, setBrand] = useState(previewData?.brand || '');
   const [price, setPrice] = useState(previewData?.price || '');
   const [mainCategory, setMainCategory] = useState<MainCategory>(previewData?.mainCategory || MainCategory.OTHER);
+  const [selectedPath, setSelectedPath] = useState<CategoryPath[]>([]);
+  const [resetTrigger, setResetTrigger] = useState(0);
 
   // Effect to update fields when previewData changes
   React.useEffect(() => {
-    setName(previewData?.name || '');
-    setBrand(previewData?.brand || '');
-    setPrice(previewData?.price || '');
-    setMainCategory(previewData?.mainCategory || MainCategory.OTHER);
-  }, [previewData]);
+    if (visible) {
+      setName(previewData?.name || '');
+      setBrand(previewData?.brand || '');
+      setPrice(previewData?.price || '');
+      setMainCategory(previewData?.mainCategory || MainCategory.OTHER);
+      setSelectedPath([]);
+    }
+  }, [previewData, visible]);
+
+  const handleCategorySelect = (paths: CategoryPath[]) => {
+    setSelectedPath(paths);
+    const mainCategoryPath = paths.find(p => p.level === 'main');
+    if (mainCategoryPath) {
+      setMainCategory(mainCategoryPath.name as MainCategory);
+    }
+  };
+
+  const resetForm = () => {
+    setName('');
+    setBrand('');
+    setPrice('');
+    setMainCategory(MainCategory.OTHER);
+    setSelectedPath([]);
+    setResetTrigger(prev => prev + 1);
+  };
 
   const handleSaveAndClose = () => {
-    // Update preview data with edited values
-    const updatedData = {
+    onSave({
       ...previewData,
       name,
       brand,
       price,
-      mainCategory
-    };
-    
-    // Pass back updated data
-    onSave();
+      mainCategory,
+      categoryPath: selectedPath,
+    });
+    resetForm();
     onClose();
   };
 
@@ -96,7 +116,10 @@ const QuickAddModal: React.FC<QuickAddModalProps> = ({
       visible={visible}
       animationType="slide"
       transparent={true}
-      onRequestClose={onClose}
+      onRequestClose={() => {
+        resetForm();
+        onClose();
+      }}
     >
       <View style={styles.modalContainer}>
         <KeyboardAvoidingView
@@ -108,7 +131,12 @@ const QuickAddModal: React.FC<QuickAddModalProps> = ({
               <Text style={[styles.modalTitle, { color: colors.text }]}>
                 Add to {isWishlist ? 'Wishlist' : 'Collection'}
               </Text>
-              <TouchableOpacity onPress={onClose}>
+              <TouchableOpacity 
+                onPress={() => {
+                  resetForm();
+                  onClose();
+                }}
+              >
                 <Ionicons name="close" size={24} color={colors.text} />
               </TouchableOpacity>
             </View>
@@ -150,28 +178,11 @@ const QuickAddModal: React.FC<QuickAddModalProps> = ({
               
               <View style={styles.inputGroup}>
                 <Text style={[styles.label, { color: colors.secondaryText }]}>Category</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScrollView}>
-                  {Object.values(MainCategory).map((cat) => (
-                    <TouchableOpacity
-                      key={cat}
-                      style={[
-                        styles.categoryChip,
-                        { borderColor: colors.border },
-                        mainCategory === cat && { backgroundColor: colors.primary }
-                      ]}
-                      onPress={() => setMainCategory(cat)}
-                    >
-                      <Text
-                        style={[
-                          styles.categoryText,
-                          { color: mainCategory === cat ? 'white' : colors.text }
-                        ]}
-                      >
-                        {cat}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
+                <ChipCategorySelector
+                  selectedPath={selectedPath}
+                  onSelectCategory={handleCategorySelect}
+                  resetTrigger={resetTrigger}
+                />
               </View>
             </ScrollView>
             
@@ -184,7 +195,10 @@ const QuickAddModal: React.FC<QuickAddModalProps> = ({
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, { backgroundColor: colors.border }]}
-                onPress={onClose}
+                onPress={() => {
+                  resetForm();
+                  onClose();
+                }}
               >
                 <Text style={[styles.modalButtonText, { color: colors.text }]}>Cancel</Text>
               </TouchableOpacity>
@@ -327,15 +341,11 @@ const BrowserScreen: React.FC = () => {
     setShowQuickAdd(true);
   };
 
-  const handleAddProduct = () => {
+  const handleAddProduct = (updatedData: PreviewData & { categoryPath: CategoryPath[] }) => {
     try {
       const timestamp = new Date().toISOString();
       const id = generateUUID();
-      const categoryPath = [{
-        id: previewData.mainCategory,
-        name: previewData.mainCategory,
-        level: 'main' as const
-      }];
+      const categoryPath = updatedData.categoryPath;
       
       const productData = {
         id,
@@ -548,6 +558,7 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingHorizontal: 16,
     paddingBottom: Platform.OS === 'ios' ? 34 : 24,
+    maxHeight: '85%',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -593,20 +604,6 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: '500',
     fontSize: 16,
-  },
-  categoryScrollView: {
-    flexDirection: 'row',
-    marginBottom: 8,
-  },
-  categoryChip: {
-    borderWidth: 1,
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    marginRight: 8,
-  },
-  categoryText: {
-    fontSize: 14,
   },
 });
 
