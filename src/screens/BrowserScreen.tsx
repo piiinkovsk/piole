@@ -10,10 +10,10 @@ import {
   Text,
   ScrollView,
   KeyboardAvoidingView,
-  Platform
+  Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { WebView } from 'react-native-webview';
 import { useNavigation } from '@react-navigation/native';
 import type { CompositeNavigationProp } from '@react-navigation/native';
@@ -21,7 +21,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 
 import { useTheme } from '../store/ThemeContext';
-import { MainCategory } from '../types/product';
+import { MainCategory, CategoryPath } from '../types/product';
 import { useStoreContext } from '../store/StoreContext';
 import { generateUUID } from '../utils/uuid';
 import { RootTabParamList, CollectionStackParamList, WishlistStackParamList } from '../navigation/types';
@@ -200,7 +200,9 @@ const BrowserScreen: React.FC = () => {
   const { colors } = useTheme();
   const { dispatch } = useStoreContext();
   const navigation = useNavigation<BrowserScreenNavigationProp>();
+  const insets = useSafeAreaInsets();
   const webViewRef = useRef<WebView>(null);
+  
   const [currentUrl, setCurrentUrl] = useState(DEFAULT_URL);
   const [urlInput, setUrlInput] = useState(DEFAULT_URL);
   const [isLoading, setIsLoading] = useState(true);
@@ -208,7 +210,6 @@ const BrowserScreen: React.FC = () => {
   const [canGoForward, setCanGoForward] = useState(false);
   const [isWishlist, setIsWishlist] = useState(false);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
-  const [showToolbar, setShowToolbar] = useState(true);
   const [previewData, setPreviewData] = useState<PreviewData>({
     name: '',
     brand: '',
@@ -218,9 +219,8 @@ const BrowserScreen: React.FC = () => {
     purchaseLink: '',
   });
 
-  // Extract metadata from the current webpage
   const extractMetadata = () => {
-    webViewRef.current?.injectJavaScript(`
+    const script = `
       (function() {
         function findElement(selectors) {
           for (const selector of selectors) {
@@ -238,7 +238,6 @@ const BrowserScreen: React.FC = () => {
             .trim();
         }
 
-        // Get product name
         const nameSelectors = [
           'meta[property="og:title"]',
           'meta[name="twitter:title"]',
@@ -250,31 +249,13 @@ const BrowserScreen: React.FC = () => {
           'h1'
         ];
         
-        let name = '';
-        const nameElement = findElement(nameSelectors);
-        if (nameElement) {
-          name = nameElement.getAttribute('content') || cleanText(nameElement.textContent);
-        }
-        if (!name) {
-          name = document.title.split('|')[0].trim();
-        }
-        
-        // Get product image
-        const imageSelectors = [
-          'meta[property="og:image"]',
-          'meta[name="twitter:image"]',
-          'meta[property="product:image"]',
-          'img[class*="product-image"]',
-          'img[class*="productImage"]'
+        const brandSelectors = [
+          'meta[property="product:brand"]',
+          'meta[name="brand"]',
+          '[class*="brand-name"]',
+          '[class*="brandName"]'
         ];
         
-        let imageUrl = '';
-        const imageElement = findElement(imageSelectors);
-        if (imageElement) {
-          imageUrl = imageElement.getAttribute('content') || imageElement.getAttribute('src');
-        }
-        
-        // Get price
         const priceSelectors = [
           'meta[property="product:price:amount"]',
           'meta[property="og:price:amount"]',
@@ -284,288 +265,217 @@ const BrowserScreen: React.FC = () => {
           '[itemprop="price"]'
         ];
         
-        let price = '';
+        const imageSelectors = [
+          'meta[property="og:image"]',
+          'meta[name="twitter:image"]',
+          'meta[property="product:image"]',
+          'img[class*="product-image"]',
+          'img[class*="productImage"]'
+        ];
+
+        let data = {
+          name: '',
+          brand: '',
+          imageUrl: '',
+          price: ''
+        };
+
+        // Extract name
+        const nameElement = findElement(nameSelectors);
+        if (nameElement) {
+          data.name = nameElement.getAttribute('content') || cleanText(nameElement.textContent);
+        }
+        if (!data.name) {
+          data.name = document.title.split('|')[0].trim();
+        }
+
+        // Extract brand
+        const brandElement = findElement(brandSelectors);
+        if (brandElement) {
+          data.brand = brandElement.getAttribute('content') || cleanText(brandElement.textContent);
+        }
+
+        // Extract price
         const priceElement = findElement(priceSelectors);
         if (priceElement) {
           const priceText = priceElement.getAttribute('content') || cleanText(priceElement.textContent);
           const priceMatch = priceText.match(/[$€£¥]?\\s*([0-9]+(?:\\.[0-9]{2})?)/);
           if (priceMatch) {
-            price = priceMatch[1];
+            data.price = priceMatch[1];
           }
         }
-        
-        // Get brand
-        const brandSelectors = [
-          'meta[property="product:brand"]',
-          'meta[name="brand"]',
-          'meta[property="og:brand"]',
-          '[class*="brand-name"]',
-          '[class*="brandName"]',
-          '[itemprop="brand"]'
-        ];
-        
-        let brand = '';
-        const brandElement = findElement(brandSelectors);
-        if (brandElement) {
-          brand = brandElement.getAttribute('content') || cleanText(brandElement.textContent);
+
+        // Extract image
+        const imageElement = findElement(imageSelectors);
+        if (imageElement) {
+          data.imageUrl = imageElement.getAttribute('content') || imageElement.getAttribute('src');
+          if (data.imageUrl && !data.imageUrl.startsWith('http')) {
+            data.imageUrl = new URL(data.imageUrl, window.location.href).href;
+          }
         }
 
-        window.ReactNativeWebView.postMessage(JSON.stringify({
-          name,
-          brand,
-          imageUrl,
-          price,
-          sourceUrl: window.location.href
-        }));
-        
-        return true;
+        window.ReactNativeWebView.postMessage(JSON.stringify(data));
       })();
-    `);
+    `;
+
+    webViewRef.current?.injectJavaScript(script);
   };
-  
-  // Handle URL input submission
-  const handleUrlSubmit = () => {
-    let url = urlInput.trim();
-    
-    // Add https:// if missing
-    if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      url = 'https://' + url;
-    }
-    
-    setCurrentUrl(url);
-    setUrlInput(url);
+
+  const handleQuickAdd = (isWish: boolean = false) => {
+    setIsWishlist(isWish);
+    extractMetadata();
+    setShowQuickAdd(true);
   };
-  
-  // Handle WebView message events (metadata extraction results)
-  const handleWebViewMessage = (event: any) => {
+
+  const handleAddProduct = () => {
     try {
-      const extractedData = JSON.parse(event.nativeEvent.data);
+      const timestamp = new Date().toISOString();
+      const id = generateUUID();
+      const categoryPath = [{
+        id: previewData.mainCategory,
+        name: previewData.mainCategory,
+        level: 'main' as const
+      }];
       
-      // Determine category based on URL or content
-      let category = MainCategory.OTHER;
-      const url = extractedData.sourceUrl.toLowerCase();
-      
-      if (url.includes('makeup') || url.includes('face') || url.includes('lips') || url.includes('eyes')) {
-        category = MainCategory.MAKEUP;
-      } else if (url.includes('skincare') || url.includes('skin-care') || url.includes('face')) {
-        category = MainCategory.SKINCARE;
-      } else if (url.includes('hair') || url.includes('shampoo') || url.includes('conditioner')) {
-        category = MainCategory.HAIRCARE;
-      } else if (url.includes('perfume') || url.includes('fragrance') || url.includes('scent')) {
-        category = MainCategory.PERFUME;
-      } else if (url.includes('body') || url.includes('lotion') || url.includes('bath')) {
-        category = MainCategory.BODYCARE;
+      const productData = {
+        id,
+        name: previewData.name || 'Untitled Product',
+        brand: previewData.brand || '',
+        mainCategory: previewData.mainCategory,
+        categoryPath,
+        subCategories: [],
+        imageUrl: previewData.imageUrl || '',
+        purchaseLink: previewData.purchaseLink || currentUrl,
+        price: previewData.price ? parseFloat(previewData.price) : undefined,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      };
+
+      if (isWishlist) {
+        dispatch({
+          type: 'ADD_TO_WISHLIST',
+          payload: {
+            ...productData,
+            priority: 'medium' as const,
+          }
+        });
+        navigation.navigate('Wishlist', { screen: 'WishlistHome' });
+      } else {
+        dispatch({
+          type: 'ADD_TO_COLLECTION',
+          payload: {
+            ...productData,
+            expirationDate: undefined,
+            isOpened: false,
+            openedDate: undefined,
+            periodAfterOpening: undefined,
+          }
+        });
+        navigation.navigate('Collection', { screen: 'CollectionHome' });
       }
-
-      setPreviewData({
-        name: extractedData.name || '',
-        brand: extractedData.brand || '',
-        imageUrl: extractedData.imageUrl || '',
-        price: extractedData.price || '',
-        mainCategory: category,
-        purchaseLink: extractedData.sourceUrl,
-      });
-
-      setShowQuickAdd(true);
-      setShowToolbar(false);
+      setShowQuickAdd(false);
     } catch (error) {
-      console.error('Error parsing WebView message:', error);
+      Alert.alert('Error', 'Failed to add product');
     }
-  };
-  
-  // Handle navigation state change
-  const handleNavigationStateChange = (navState: { 
-    url: string; 
-    canGoBack: boolean; 
-    canGoForward: boolean; 
-  }) => {
-    setCurrentUrl(navState.url);
-    setUrlInput(navState.url);
-    setCanGoBack(navState.canGoBack);
-    setCanGoForward(navState.canGoForward);
-  };
-  
-  // Handle go back
-  const handleGoBack = () => {
-    if (canGoBack && webViewRef.current) {
-      webViewRef.current.goBack();
-    }
-  };
-  
-  // Handle go forward
-  const handleGoForward = () => {
-    if (canGoForward && webViewRef.current) {
-      webViewRef.current.goForward();
-    }
-  };
-  
-  // Handle refresh
-  const handleRefresh = () => {
-    if (webViewRef.current) {
-      webViewRef.current.reload();
-    }
-  };
-  
-  // Handle go home
-  const handleGoHome = () => {
-    setCurrentUrl(DEFAULT_URL);
-    setUrlInput(DEFAULT_URL);
-  };
-
-  // Handle quick add save
-  const handleQuickAddSave = () => {
-    const productId = generateUUID();
-    const now = new Date().toISOString();
-    
-    const commonData = {
-      id: productId,
-      name: previewData.name,
-      brand: previewData.brand,
-      mainCategory: previewData.mainCategory,
-      subCategories: [],
-      imageUrl: previewData.imageUrl || 'https://via.placeholder.com/200',
-      purchaseLink: previewData.purchaseLink,
-      price: previewData.price ? parseFloat(previewData.price) : undefined,
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    if (isWishlist) {
-      dispatch({
-        type: 'ADD_TO_WISHLIST',
-        payload: {
-          ...commonData,
-          priority: 'medium',
-        },
-      });
-    } else {
-      dispatch({
-        type: 'ADD_TO_COLLECTION',
-        payload: {
-          ...commonData,
-          expirationDate: undefined,
-          isOpened: false,
-          openedDate: undefined,
-          periodAfterOpening: undefined,
-        },
-      });
-    }
-
-    Alert.alert(
-      'Success',
-      `Product "${previewData.name}" has been added to your ${isWishlist ? 'wishlist' : 'collection'}.`
-    );
   };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
-      <View style={[styles.header, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
-        <View style={[styles.urlBar, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <TextInput
-            style={[styles.urlInput, { color: colors.text }]}
-            value={urlInput}
-            onChangeText={setUrlInput}
-            onSubmitEditing={handleUrlSubmit}
-            autoCapitalize="none"
-            keyboardType="url"
-            returnKeyType="go"
-            selectTextOnFocus
-            placeholderTextColor={colors.secondaryText}
-          />
-          {urlInput ? (
-            <TouchableOpacity onPress={() => setUrlInput('')} style={styles.clearButton}>
-              <Ionicons name="close-circle" size={18} color={colors.secondaryText} />
-            </TouchableOpacity>
-          ) : null}
-          <TouchableOpacity onPress={handleUrlSubmit} style={styles.goButton}>
-            <Ionicons name="arrow-forward" size={22} color={colors.primary} />
+      <View style={styles.searchBar}>
+        <TextInput
+          style={[styles.urlInput, { color: colors.text, backgroundColor: colors.card }]}
+          value={urlInput}
+          onChangeText={setUrlInput}
+          onSubmitEditing={() => {
+            const processedUrl = urlInput.startsWith('http') ? urlInput : `https://${urlInput}`;
+            setCurrentUrl(processedUrl);
+          }}
+          keyboardType="url"
+          autoCapitalize="none"
+          autoCorrect={false}
+          placeholder="Enter URL"
+          placeholderTextColor={colors.secondaryText}
+          selectTextOnFocus
+        />
+      </View>
+
+      <View style={styles.webViewContainer}>
+        <WebView
+          ref={webViewRef}
+          source={{ uri: currentUrl }}
+          onNavigationStateChange={(navState) => {
+            setCurrentUrl(navState.url);
+            setUrlInput(navState.url);
+            setCanGoBack(navState.canGoBack);
+            setCanGoForward(navState.canGoForward);
+          }}
+          onLoadStart={() => setIsLoading(true)}
+          onLoadEnd={() => setIsLoading(false)}
+          onMessage={(event) => {
+            try {
+              const data = JSON.parse(event.nativeEvent.data);
+              setPreviewData(prev => ({
+                ...prev,
+                ...data,
+                purchaseLink: currentUrl
+              }));
+            } catch (error) {
+              console.error('Failed to parse metadata:', error);
+            }
+          }}
+        />
+        {isLoading && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.primary} />
+          </View>
+        )}
+      </View>
+
+      <View style={[styles.bottomToolbar, { backgroundColor: colors.card, paddingBottom: insets.bottom }]}>
+        <View style={styles.toolbarContent}>
+          <TouchableOpacity
+            style={[styles.toolbarButton, canGoBack ? null : styles.disabledButton]}
+            onPress={() => canGoBack && webViewRef.current?.goBack()}
+            disabled={!canGoBack}
+          >
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.toolbarButton, canGoForward ? null : styles.disabledButton]}
+            onPress={() => canGoForward && webViewRef.current?.goForward()}
+            disabled={!canGoForward}
+          >
+            <Ionicons name="arrow-forward" size={24} color={colors.text} />
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.toolbarButton, { backgroundColor: colors.primary }]}
+            onPress={() => handleQuickAdd(false)}
+          >
+            <Ionicons name="add-circle-outline" size={24} color="white" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.toolbarButton, { backgroundColor: colors.primary }]}
+            onPress={() => handleQuickAdd(true)}
+          >
+            <Ionicons name="heart-outline" size={24} color="white" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.toolbarButton}
+            onPress={() => webViewRef.current?.reload()}
+          >
+            <Ionicons name="refresh" size={24} color={colors.text} />
           </TouchableOpacity>
         </View>
       </View>
-      
-      <WebView
-        ref={webViewRef}
-        source={{ uri: currentUrl }}
-        onNavigationStateChange={handleNavigationStateChange}
-        onLoadStart={() => setIsLoading(true)}
-        onLoadEnd={() => setIsLoading(false)}
-        onMessage={handleWebViewMessage}
-        style={styles.webView}
-      />
-      
-      {isLoading && (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
-      )}
-      
-      {showToolbar && (
-        <>
-          <View style={[styles.toolbar, { backgroundColor: colors.background, borderTopColor: colors.border }]}>
-            <TouchableOpacity 
-              style={[styles.toolbarButton, !canGoBack && styles.disabledButton]} 
-              onPress={handleGoBack}
-              disabled={!canGoBack}
-            >
-              <Ionicons 
-                name="arrow-back" 
-                size={24} 
-                color={canGoBack ? colors.text : colors.secondaryText} 
-              />
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.toolbarButton, !canGoForward && styles.disabledButton]} 
-              onPress={handleGoForward}
-              disabled={!canGoForward}
-            >
-              <Ionicons 
-                name="arrow-forward" 
-                size={24} 
-                color={canGoForward ? colors.text : colors.secondaryText} 
-              />
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.toolbarButton} onPress={handleRefresh}>
-              <Ionicons name="refresh" size={24} color={colors.text} />
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.toolbarButton} onPress={handleGoHome}>
-              <Ionicons name="home" size={24} color={colors.text} />
-            </TouchableOpacity>
-          </View>
-          
-          <View style={[styles.actionsBar, { backgroundColor: 'transparent' }]}>
-            <TouchableOpacity 
-              style={[styles.actionButton, { backgroundColor: colors.primary }]} 
-              onPress={() => {
-                setIsWishlist(false);
-                extractMetadata();
-              }}
-            >
-              <MaterialIcons name="collections" size={20} color="white" />
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.actionButton, { backgroundColor: colors.primaryDark }]} 
-              onPress={() => {
-                setIsWishlist(true);
-                extractMetadata();
-              }}
-            >
-              <MaterialIcons name="favorite" size={20} color="white" />
-            </TouchableOpacity>
-          </View>
-        </>
-      )}
-      
+
       <QuickAddModal
         visible={showQuickAdd}
-        onClose={() => {
-          setShowQuickAdd(false);
-          setShowToolbar(true);
-        }}
-        onSave={handleQuickAddSave}
+        onClose={() => setShowQuickAdd(false)}
+        onSave={handleAddProduct}
         previewData={previewData}
         isWishlist={isWishlist}
       />
@@ -577,25 +487,24 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    padding: 8,
-    borderBottomWidth: 1,
-  },
-  urlBar: {
+  searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 8,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    height: 40,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   urlInput: {
     flex: 1,
-    fontSize: 14,
-    height: '100%',
+    fontSize: 16,
+    height: 36,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    marginVertical: 4,
   },
-  webView: {
+  webViewContainer: {
     flex: 1,
+    position: 'relative',
   },
   loadingContainer: {
     ...StyleSheet.absoluteFillObject,
@@ -603,41 +512,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.3)',
   },
-  toolbar: {
+  bottomToolbar: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  toolbarContent: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    borderTopWidth: 1,
-    paddingVertical: 8,
+    alignItems: 'center',
+    height: 44,
   },
   toolbarButton: {
-    padding: 8,
-  },
-  actionsBar: {
-    position: 'absolute',
-    bottom: 80,
-    right: 16,
-    flexDirection: 'column',
-    justifyContent: 'space-between',
-    height: 110,
-  },
-  actionButton: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-  },
-  clearButton: {
-    padding: 4,
-  },
-  goButton: {
-    marginLeft: 4,
-    padding: 4,
   },
   disabledButton: {
     opacity: 0.5,
