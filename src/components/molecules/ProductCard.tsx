@@ -41,21 +41,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, isWishlist = false, 
     return 'priority' in product;
   };
 
-  // Get wishlist priority text and color
-  const getWishlistPriority = (product: WishlistProduct) => {
-    if (!product.priority) return { text: 'Low', color: colors.secondaryText };
-    
-    switch (product.priority) {
-      case 'high':
-        return { text: 'High', color: colors.error };
-      case 'medium':
-        return { text: 'Medium', color: colors.primaryDark };
-      case 'low':
-      default:
-        return { text: 'Low', color: colors.secondaryText };
-    }
-  };
-
   return (
     <TouchableOpacity
       style={[styles.container, { backgroundColor: colors.card, borderColor: colors.border }]}
@@ -68,15 +53,14 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, isWishlist = false, 
           style={styles.image}
           resizeMode="cover"
         />
-        {isWishlistProduct(product) && (
-          <View style={styles.overlayContainer}>
-            <View style={styles.chipsContainer}>
-              <View style={[styles.categoryChip, { backgroundColor: colors.primary }]}>
-                <Text style={styles.chipText}>{product.mainCategory}</Text>
-              </View>
+        {/* Category indicator only */}
+        <View style={styles.overlayContainer}>
+          <View style={styles.chipsContainer}>
+            <View style={[styles.categoryChip, { backgroundColor: colors.primary }]}>
+              <Text style={styles.chipText}>{product.mainCategory}</Text>
             </View>
           </View>
-        )}
+        </View>
       </View>
       
       <View style={styles.infoContainer}>
@@ -142,13 +126,6 @@ const styles = StyleSheet.create({
   chipsContainer: {
     flexDirection: 'column',
     alignItems: 'flex-start',
-    gap: 4,
-  },
-  priorityChip: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    opacity: 0.9,
   },
   categoryChip: {
     paddingHorizontal: 8,
