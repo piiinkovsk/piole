@@ -1,0 +1,22 @@
+{
+  "name": "piole-extension",
+  "version": "1.0.0",
+  "description": "Browser extension for Piole Cosmetics Collection",
+  "scripts": {
+    "build": "tsc && webpack",
+    "watch": "webpack --watch",
+    "lint": "eslint src/**/*.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.254",
+    "@typescript-eslint/eslint-plugin": "^6.15.0",
+    "@typescript-eslint/parser": "^6.15.0",
+    "copy-webpack-plugin": "^11.0.0",
+    "eslint": "^8.56.0",
+    "ts-loader": "^9.5.1",
+    "typescript": "^5.3.3",
+    "webpack": "^5.89.0",
+    "webpack-cli": "^5.1.4"
+  }
+}

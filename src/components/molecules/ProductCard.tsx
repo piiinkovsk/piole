@@ -28,10 +28,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, isWishlist = false, 
   // Format price for display
   const formatPrice = (price?: number) => {
     if (price === undefined) return '';
-    
     return `$${price.toFixed(2)}`;
   };
-  
+
   // Check if the product is from the collection (has expirationDate property)
   const isCollectionProduct = (product: any): product is CollectionProduct => {
     return 'expirationDate' in product;
@@ -48,7 +47,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, isWishlist = false, 
     
     switch (product.priority) {
       case 'high':
-        return { text: 'High Priority', color: colors.error };
+        return { text: 'High', color: colors.error };
       case 'medium':
         return { text: 'Medium', color: colors.primaryDark };
       case 'low':
@@ -69,6 +68,15 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, isWishlist = false, 
           style={styles.image}
           resizeMode="cover"
         />
+        {isWishlistProduct(product) && (
+          <View style={styles.overlayContainer}>
+            <View style={styles.chipsContainer}>
+              <View style={[styles.categoryChip, { backgroundColor: colors.primary }]}>
+                <Text style={styles.chipText}>{product.mainCategory}</Text>
+              </View>
+            </View>
+          </View>
+        )}
       </View>
       
       <View style={styles.infoContainer}>
@@ -101,22 +109,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, isWishlist = false, 
               {formatExpirationDate(product.expirationDate)}
             </Text>
           ) : isWishlistProduct(product) ? (
-            <View style={styles.footerContent}>
-              {product.price ? (
-                <Text style={[styles.price, { color: colors.primary }]}>
-                  {formatPrice(product.price)}
-                </Text>
-              ) : null}
-              <Text style={[
-                styles.priorityText,
-                { color: getWishlistPriority(product).color }
-              ]}>
-                {getWishlistPriority(product).text}
-              </Text>
-            </View>
-          ) : (
-            <View />
-          )}
+            <Text style={[styles.price, { color: colors.primary }]}>
+              {formatPrice(product.price)}
+            </Text>
+          ) : null}
         </View>
       </View>
     </TouchableOpacity>
@@ -139,6 +135,32 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
+  overlayContainer: {
+    ...StyleSheet.absoluteFillObject,
+    padding: 8,
+  },
+  chipsContainer: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    gap: 4,
+  },
+  priorityChip: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    opacity: 0.9,
+  },
+  categoryChip: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    opacity: 0.9,
+  },
+  chipText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '600',
+  },
   infoContainer: {
     padding: 10,
   },
@@ -157,23 +179,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  footerContent: {
-    flex: 1,
-    flexDirection: 'column',
-    alignItems: 'flex-start',
-    gap: 4,
-  },
   expiration: {
     fontSize: 10,
   },
   price: {
     fontSize: 14,
     fontWeight: '600',
-  },
-  priorityText: {
-    fontSize: 12,
-    fontWeight: '500',
-  },
+  }
 });
 
 export default ProductCard;

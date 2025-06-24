@@ -118,13 +118,36 @@ const EditProductScreen: React.FC<EditProductScreenProps> = ({
     setShowOpenedDatePicker(false);
     if (selectedDate) {
       setOpenedDate(selectedDate);
+      // If PAO is set, auto-calculate expiration date
+      if (periodAfterOpening) {
+        const expiryDate = new Date(selectedDate);
+        expiryDate.setMonth(expiryDate.getMonth() + parseInt(periodAfterOpening, 10));
+        setExpirationDate(expiryDate);
+      }
+    }
+  };
+  
+  // Handle PAO changes
+  const handlePAOChange = (text: string) => {
+    const cleanText = text.replace(/[^0-9]/g, '');
+    setPeriodAfterOpening(cleanText);
+    
+    // If opened date is set, update expiration date based on new PAO
+    if (openedDate && cleanText) {
+      const expiryDate = new Date(openedDate);
+      expiryDate.setMonth(expiryDate.getMonth() + parseInt(cleanText, 10));
+      setExpirationDate(expiryDate);
     }
   };
   
   // Format date for display
   const formatDate = (date: Date | null) => {
     if (!date) return 'Not set';
-    return date.toLocaleDateString();
+    return date.toLocaleDateString(undefined, { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
   };
   
   // Handle save
@@ -301,91 +324,101 @@ const EditProductScreen: React.FC<EditProductScreenProps> = ({
                 </View>
               </View>
               
-              {/* Collection-specific fields */}
+              {/* Collection Details */}
               {!isWishlist && (
                 <View style={styles.section}>
                   <Text style={[styles.sectionTitle, { color: colors.text }]}>Collection Details</Text>
-                  
-                  <View style={styles.inputGroup}>
-                    <Text style={[styles.label, { color: colors.secondaryText }]}>Expiration Date</Text>
-                    <TouchableOpacity
-                      style={[styles.dateButton, { 
-                        borderColor: colors.border, 
-                        backgroundColor: colors.card 
-                      }]}
-                      onPress={() => setShowDatePicker(true)}
-                    >
-                      <Text style={{ color: colors.text }}>
-                        {expirationDate ? formatDate(expirationDate) : 'Set expiration date'}
-                      </Text>
-                      <Ionicons name="calendar" size={20} color={colors.secondaryText} />
-                    </TouchableOpacity>
-                    
-                    {showDatePicker && (
-                      <DateTimePicker
-                        value={expirationDate || new Date()}
-                        mode="date"
-                        display="default"
-                        onChange={handleDateChange}
-                      />
-                    )}
-                  </View>
-                  
+
                   <View style={styles.switchGroup}>
-                    <Text style={[styles.label, { color: colors.secondaryText }]}>Opened</Text>
+                    <Text style={[styles.label, { color: colors.secondaryText }]}>Product is Opened</Text>
                     <Switch
                       value={isOpened}
-                      onValueChange={setIsOpened}
+                      onValueChange={(value) => {
+                        setIsOpened(value);
+                        if (!value) {
+                          setOpenedDate(null);
+                          setPeriodAfterOpening('');
+                        }
+                      }}
                       trackColor={{ false: colors.border, true: colors.primary }}
                     />
                   </View>
-                  
+
                   {isOpened && (
                     <>
                       <View style={styles.inputGroup}>
-                        <Text style={[styles.label, { color: colors.secondaryText }]}>Opened Date</Text>
+                        <Text style={[styles.label, { color: colors.secondaryText }]}>When did you open this product?</Text>
                         <TouchableOpacity
-                          style={[styles.dateButton, { 
-                            borderColor: colors.border, 
-                            backgroundColor: colors.card 
-                          }]}
+                          style={[styles.dateButton, { borderColor: colors.border, backgroundColor: colors.card }]}
                           onPress={() => setShowOpenedDatePicker(true)}
                         >
-                          <Text style={{ color: colors.text }}>
-                            {openedDate ? formatDate(openedDate) : 'Set opened date'}
-                          </Text>
+                          <Text style={{ color: colors.text }}>{openedDate ? formatDate(openedDate) : 'Select opened date'}</Text>
                           <Ionicons name="calendar" size={20} color={colors.secondaryText} />
                         </TouchableOpacity>
-                        
+
                         {showOpenedDatePicker && (
                           <DateTimePicker
                             value={openedDate || new Date()}
                             mode="date"
                             display="default"
                             onChange={handleOpenedDateChange}
+                            maximumDate={new Date()}
                           />
                         )}
                       </View>
-                      
+
                       <View style={styles.inputGroup}>
-                        <Text style={[styles.label, { color: colors.secondaryText }]}>
-                          Period After Opening (months)
+                        <Text style={[styles.label, { color: colors.secondaryText }]}>Period After Opening (PAO)</Text>
+                        <Text style={[styles.helpText, { color: colors.secondaryText }]}>
+                          Look for the jar symbol (🧴) with a number and 'M' on your product
                         </Text>
                         <TextInput
-                          style={[styles.input, { 
-                            color: colors.text, 
-                            borderColor: colors.border, 
-                            backgroundColor: colors.card 
-                          }]}
+                          style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.card }]}
                           value={periodAfterOpening}
-                          onChangeText={(text) => setPeriodAfterOpening(text.replace(/[^0-9]/g, ''))}
-                          placeholder="Enter PAO in months (e.g., 12)"
+                          onChangeText={handlePAOChange}
+                          placeholder="Enter months (e.g., 12)"
                           placeholderTextColor={colors.secondaryText}
                           keyboardType="number-pad"
                         />
                       </View>
                     </>
                   )}
+
+                  <View style={styles.inputGroup}>
+                    <Text style={[styles.label, { color: colors.secondaryText }]}>
+                      {isOpened ? 'Calculated Expiration Date' : 'Expiration Date'}
+                    </Text>
+                    {isOpened && openedDate && periodAfterOpening ? (
+                      <View style={[styles.dateInfo, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                        <Text style={{ color: colors.text }}>{formatDate(expirationDate)}</Text>
+                        <Text style={[styles.helpText, { color: colors.secondaryText }]}>
+                          Based on opened date and PAO
+                        </Text>
+                      </View>
+                    ) : (
+                      <>
+                        <TouchableOpacity
+                          style={[styles.dateButton, { borderColor: colors.border, backgroundColor: colors.card }]}
+                          onPress={() => setShowDatePicker(true)}
+                        >
+                          <Text style={{ color: colors.text }}>
+                            {expirationDate ? formatDate(expirationDate) : 'Select expiration date'}
+                          </Text>
+                          <Ionicons name="calendar" size={20} color={colors.secondaryText} />
+                        </TouchableOpacity>
+
+                        {showDatePicker && (
+                          <DateTimePicker
+                            value={expirationDate || new Date()}
+                            mode="date"
+                            display="default"
+                            onChange={handleDateChange}
+                            minimumDate={new Date()}
+                          />
+                        )}
+                      </>
+                    )}
+                  </View>
                 </View>
               )}
               
@@ -470,15 +503,16 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: 'bold',
     marginBottom: 16,
   },
   inputGroup: {
-    marginBottom: 16,
+    marginBottom: 20,
   },
   label: {
-    fontSize: 14,
-    marginBottom: 6,
+    fontSize: 16,
+    marginBottom: 8,
+    fontWeight: '500',
   },
   input: {
     borderWidth: 1,
@@ -509,10 +543,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    padding: 12,
     borderWidth: 1,
     borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
   },
   switchGroup: {
     flexDirection: 'row',
@@ -525,6 +558,16 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+  },
+  helpText: {
+    fontSize: 12,
+    marginBottom: 8,
+    fontStyle: 'italic',
+  },
+  dateInfo: {
+    padding: 12,
+    borderWidth: 1,
+    borderRadius: 8,
   },
 });
 
