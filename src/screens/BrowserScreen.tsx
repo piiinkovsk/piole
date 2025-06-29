@@ -10,7 +10,8 @@ import {
   Text,
   ScrollView,
   KeyboardAvoidingView,
-  Platform
+  Platform,
+  Image
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -63,12 +64,18 @@ const QuickAddModal: React.FC<QuickAddModalProps> = ({
   isWishlist 
 }) => {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const [name, setName] = useState(previewData?.name || '');
   const [brand, setBrand] = useState(previewData?.brand || '');
   const [price, setPrice] = useState(previewData?.price || '');
   const [mainCategory, setMainCategory] = useState<MainCategory>(previewData?.mainCategory || MainCategory.OTHER);
-  const [selectedPath, setSelectedPath] = useState<CategoryPath[]>([]);
+  const [selectedPath, setSelectedPath] = useState<CategoryPath[]>([{
+    id: previewData?.mainCategory || MainCategory.OTHER,
+    name: previewData?.mainCategory || MainCategory.OTHER,
+    level: 'main'
+  }]);
   const [resetTrigger, setResetTrigger] = useState(0);
+  const [imageError, setImageError] = useState(false);
 
   // Effect to update fields when previewData changes
   React.useEffect(() => {
@@ -76,8 +83,17 @@ const QuickAddModal: React.FC<QuickAddModalProps> = ({
       setName(previewData?.name || '');
       setBrand(previewData?.brand || '');
       setPrice(previewData?.price || '');
-      setMainCategory(previewData?.mainCategory || MainCategory.OTHER);
-      setSelectedPath([]);
+      
+      // Maintain category path state
+      const initialMainCategory = previewData?.mainCategory || MainCategory.OTHER;
+      setMainCategory(initialMainCategory);
+      
+      // Initialize with existing path or just main category
+      setSelectedPath([{
+        id: initialMainCategory,
+        name: initialMainCategory,
+        level: 'main'
+      }]);
     }
   }, [previewData, visible]);
 
@@ -94,19 +110,47 @@ const QuickAddModal: React.FC<QuickAddModalProps> = ({
     setBrand('');
     setPrice('');
     setMainCategory(MainCategory.OTHER);
-    setSelectedPath([]);
+    setSelectedPath([{
+      id: MainCategory.OTHER,
+      name: MainCategory.OTHER,
+      level: 'main'
+    }]);
     setResetTrigger(prev => prev + 1);
   };
 
-  const handleSaveAndClose = () => {
-    onSave({
-      ...previewData,
-      name,
-      brand,
-      price,
-      mainCategory,
-      categoryPath: selectedPath,
-    });
+  const handleSave = () => {
+    if (!name.trim()) {
+      Alert.alert('Error', 'Please enter a product name');
+      return;
+    }
+
+    // Ensure we have at least a main category
+    if (!selectedPath.length) {
+      const defaultPath: CategoryPath[] = [{
+        id: mainCategory,
+        name: mainCategory,
+        level: 'main'
+      }];
+      setSelectedPath(defaultPath);
+      onSave({
+        ...previewData,
+        name: name.trim(),
+        brand: brand.trim(),
+        price,
+        mainCategory,
+        categoryPath: defaultPath,
+      });
+    } else {
+      onSave({
+        ...previewData,
+        name: name.trim(),
+        brand: brand.trim(),
+        price,
+        mainCategory,
+        categoryPath: selectedPath,
+      });
+    }
+
     resetForm();
     onClose();
   };
@@ -115,33 +159,55 @@ const QuickAddModal: React.FC<QuickAddModalProps> = ({
     <Modal
       visible={visible}
       animationType="slide"
-      transparent={true}
-      onRequestClose={() => {
-        resetForm();
-        onClose();
-      }}
+      onRequestClose={onClose}
+      statusBarTranslucent
+      presentationStyle="fullScreen"
     >
-      <View style={styles.modalContainer}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.keyboardAvoidingView}
+      <View 
+        style={[
+          styles.modalContainer, 
+          { 
+            backgroundColor: colors.background,
+            paddingTop: insets.top, // Add padding for the status bar
+          }
+        ]}
+      >
+        <View style={styles.modalHeader}>
+          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <Ionicons name="close" size={24} color={colors.text} />
+          </TouchableOpacity>
+          <Text style={[styles.modalTitle, { color: colors.text }]}>
+            Add to {isWishlist ? 'Wishlist' : 'Collection'}
+          </Text>
+          <View style={styles.closeButton} />
+        </View>
+
+        <KeyboardAvoidingView 
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 0}
         >
-          <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
-            <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>
-                Add to {isWishlist ? 'Wishlist' : 'Collection'}
-              </Text>
-              <TouchableOpacity 
-                onPress={() => {
-                  resetForm();
-                  onClose();
-                }}
-              >
-                <Ionicons name="close" size={24} color={colors.text} />
-              </TouchableOpacity>
-            </View>
-            
-            <ScrollView style={styles.modalScroll}>
+          <ScrollView 
+            style={styles.modalContent}
+            contentContainerStyle={styles.modalContentContainer}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View style={styles.formContainer}>
+              {previewData.imageUrl && !imageError ? (
+                <View style={styles.imageContainer}>
+                  <Image
+                    source={{ uri: previewData.imageUrl }}
+                    style={styles.productImage}
+                    resizeMode="contain"
+                    onError={() => setImageError(true)}
+                  />
+                </View>
+              ) : (
+                <View style={[styles.imagePlaceholder, { backgroundColor: colors.border }]}>
+                  <Ionicons name="image-outline" size={48} color={colors.secondaryText} />
+                </View>
+              )}
+
               <View style={styles.inputGroup}>
                 <Text style={[styles.label, { color: colors.secondaryText }]}>Name</Text>
                 <TextInput
@@ -152,7 +218,7 @@ const QuickAddModal: React.FC<QuickAddModalProps> = ({
                   placeholderTextColor={colors.secondaryText}
                 />
               </View>
-              
+
               <View style={styles.inputGroup}>
                 <Text style={[styles.label, { color: colors.secondaryText }]}>Brand</Text>
                 <TextInput
@@ -163,7 +229,7 @@ const QuickAddModal: React.FC<QuickAddModalProps> = ({
                   placeholderTextColor={colors.secondaryText}
                 />
               </View>
-              
+
               <View style={styles.inputGroup}>
                 <Text style={[styles.label, { color: colors.secondaryText }]}>Price</Text>
                 <TextInput
@@ -175,8 +241,8 @@ const QuickAddModal: React.FC<QuickAddModalProps> = ({
                   keyboardType="decimal-pad"
                 />
               </View>
-              
-              <View style={styles.inputGroup}>
+
+              <View style={[styles.inputGroup, styles.categoryGroup]}>
                 <Text style={[styles.label, { color: colors.secondaryText }]}>Category</Text>
                 <ChipCategorySelector
                   selectedPath={selectedPath}
@@ -184,25 +250,24 @@ const QuickAddModal: React.FC<QuickAddModalProps> = ({
                   resetTrigger={resetTrigger}
                 />
               </View>
-            </ScrollView>
-            
-            <View style={styles.modalFooter}>
-              <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: colors.primary }]}
-                onPress={handleSaveAndClose}
-              >
-                <Text style={styles.modalButtonText}>Save</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: colors.border }]}
-                onPress={() => {
-                  resetForm();
-                  onClose();
-                }}
-              >
-                <Text style={[styles.modalButtonText, { color: colors.text }]}>Cancel</Text>
-              </TouchableOpacity>
             </View>
+          </ScrollView>
+
+          <View 
+            style={[
+              styles.modalFooter,
+              { 
+                paddingBottom: Math.max(insets.bottom, 16), // Ensure enough padding at bottom
+                backgroundColor: colors.background,
+              }
+            ]}
+          >
+            <TouchableOpacity
+              style={[styles.modalButton, { backgroundColor: colors.primary }]}
+              onPress={handleSave}
+            >
+              <Text style={styles.modalButtonText}>Save</Text>
+            </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
       </View>
@@ -232,6 +297,20 @@ const BrowserScreen: React.FC = () => {
     mainCategory: MainCategory.OTHER,
     purchaseLink: '',
   });
+
+  // Handle back navigation
+  const handleBack = async () => {
+    if (showQuickAdd) {
+      setShowQuickAdd(false);
+      return;
+    }
+    if (canGoBack) {
+      webViewRef.current?.goBack();
+      return;
+    }
+    // Return to previous screen
+    navigation.goBack();
+  };
 
   const extractMetadata = () => {
     const script = `
@@ -281,10 +360,21 @@ const BrowserScreen: React.FC = () => {
         
         const imageSelectors = [
           'meta[property="og:image"]',
+          'meta[property="og:image:secure_url"]',
           'meta[name="twitter:image"]',
+          'meta[name="twitter:image:src"]',
           'meta[property="product:image"]',
+          'meta[property="product:image:secure_url"]',
           'img[class*="product-image"]',
-          'img[class*="productImage"]'
+          'img[class*="productImage"]',
+          'img[class*="main-image"]',
+          'img[class*="mainImage"]',
+          'img[class*="featured"]',
+          'img[class*="primary"]',
+          // Fallback to any large image
+          'img[width="600"]',
+          'img[width="800"]',
+          'img[width="1200"]'
         ];
 
         let data = {
@@ -320,9 +410,31 @@ const BrowserScreen: React.FC = () => {
         }
 
         // Extract image
+        // Enhanced image extraction
         const imageElement = findElement(imageSelectors);
         if (imageElement) {
-          data.imageUrl = imageElement.getAttribute('content') || imageElement.getAttribute('src');
+          // Try to get the highest quality image
+          const srcset = imageElement.getAttribute('srcset');
+          if (srcset) {
+            // Parse srcset and get the largest image
+            const sources = srcset.split(',')
+              .map(src => {
+                const [url, width] = src.trim().split(' ');
+                return { url, width: parseInt(width) || 0 };
+              })
+              .sort((a, b) => b.width - a.width);
+            
+            if (sources.length > 0) {
+              data.imageUrl = sources[0].url;
+            }
+          }
+          
+          // Fallback to content or src if no srcset
+          if (!data.imageUrl) {
+            data.imageUrl = imageElement.getAttribute('content') || imageElement.getAttribute('src');
+          }
+          
+          // Ensure absolute URL
           if (data.imageUrl && !data.imageUrl.startsWith('http')) {
             data.imageUrl = new URL(data.imageUrl, window.location.href).href;
           }
@@ -392,6 +504,13 @@ const BrowserScreen: React.FC = () => {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <View style={styles.searchBar}>
+        <TouchableOpacity
+          onPress={handleBack}
+          style={[styles.backButton, { marginRight: 8 }]}
+        >
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
+        </TouchableOpacity>
+
         <TextInput
           style={[styles.urlInput, { color: colors.text, backgroundColor: colors.card }]}
           value={urlInput}
@@ -543,67 +662,102 @@ const styles = StyleSheet.create({
   },
   // Modal styles
   modalContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  keyboardAvoidingView: {
+    flex: 1,
     width: '100%',
+    height: '100%',
   },
   modalContent: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingTop: 20,
-    paddingHorizontal: 16,
-    paddingBottom: Platform.OS === 'ios' ? 34 : 24,
-    maxHeight: '85%',
+    flex: 1,
+  },
+  modalContentContainer: {
+    flexGrow: 1,
+  },
+  formContainer: {
+    padding: 20,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    height: 56,
+    paddingHorizontal: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(0,0,0,0.1)',
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
+    flex: 1,
+    textAlign: 'center',
   },
-  modalScroll: {
-    maxHeight: 280,
+  imageContainer: {
+    width: '100%',
+    height: 200,
+    marginBottom: 24,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#f5f5f5',
+  },
+  productImage: {
+    width: '100%',
+    height: '100%',
+  },
+  imagePlaceholder: {
+    width: '100%',
+    height: 200,
+    marginBottom: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   inputGroup: {
-    marginBottom: 16,
+    marginBottom: 24,
+  },
+  categoryGroup: {
+    marginBottom: 32,
   },
   label: {
-    fontSize: 14,
-    marginBottom: 6,
+    fontSize: 16,
+    marginBottom: 8,
+    fontWeight: '500',
   },
   input: {
     borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     fontSize: 16,
-    height: 44,
+    height: 50,
   },
   modalFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingTop: 16,
-    gap: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(0,0,0,0.1)',
+    paddingHorizontal: 16,
+    paddingTop: 12,
   },
   modalButton: {
-    flex: 1,
-    borderRadius: 8,
-    paddingVertical: 12,
+    borderRadius: 12,
+    paddingVertical: 16,
     alignItems: 'center',
   },
   modalButtonText: {
     color: 'white',
-    fontWeight: '500',
+    fontWeight: '600',
     fontSize: 16,
+  },
+  closeButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
 

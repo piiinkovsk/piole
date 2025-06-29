@@ -64,6 +64,7 @@ const MainTabNavigator = () => {
           tabBarIcon: ({ color, size }) => (
             <MaterialIcons name="public" size={size} color={color} />
           ),
+          headerShown: false, // Hide the header in browser mode
         }}
       />
       <Tab.Screen
