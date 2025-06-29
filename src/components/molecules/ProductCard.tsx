@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, Dimensions } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 
 import { useTheme } from '../../store/ThemeContext';
@@ -105,7 +105,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, isWishlist = false, 
 
 const styles = StyleSheet.create({
   container: {
-    width: '48%',
+    width: (Dimensions.get('window').width - 40) / 2, // 16px padding on sides + 8px gap between items
     borderRadius: 12,
     borderWidth: 1,
     overflow: 'hidden',

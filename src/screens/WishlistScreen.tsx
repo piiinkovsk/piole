@@ -305,6 +305,7 @@ const WishlistScreen: React.FC<WishlistScreenProps> = ({ navigation }) => {
       {/* Product List */}
       <FlatList
         data={filteredProducts}
+        numColumns={2}
         renderItem={({ item }) => (
           <ProductCard
             product={item}
@@ -313,10 +314,10 @@ const WishlistScreen: React.FC<WishlistScreenProps> = ({ navigation }) => {
               isWishlist: true 
             })}
           />
-        )
-        }
+        )}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.productList}
+        columnWrapperStyle={styles.row}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <MaterialIcons name="favorite" size={48} color={colors.secondaryText} />
@@ -468,24 +469,33 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   productList: {
-    padding: 16,
+    padding: 8,
+  },
+  row: {
+    flex: 1,
+    justifyContent: 'space-between',
+    paddingHorizontal: 8,
+    marginBottom: 16,
+  },
+  productCardContainer: {
+    width: (width - 36) / 2, // Account for padding and gap
+    marginBottom: 12,
   },
   emptyContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
-    minHeight: 300,
   },
   emptyText: {
     fontSize: 18,
     fontWeight: '600',
     marginTop: 16,
+    marginBottom: 8,
     textAlign: 'center',
   },
   emptySubtext: {
     fontSize: 14,
-    marginTop: 8,
     textAlign: 'center',
   },
 });
