@@ -192,12 +192,79 @@ const WishlistScreen: React.FC<WishlistScreenProps> = ({ navigation }) => {
     });
   }, [navigation, colors]);
 
+  // Helper function to check if a category is a child of another
+  const isCategoryChildOf = (childPath: CategoryPath[], parentPath: CategoryPath[]): boolean => {
+    console.log('\n=== CATEGORY MATCH CHECK ===');
+    console.log('Child Path:', childPath ? childPath.map(c => `${c.name} (${c.level})`) : 'undefined');
+    console.log('Parent Path:', parentPath ? parentPath.map(c => `${c.name} (${c.level})`) : 'undefined');
+    
+    // Handle cases where paths are empty or undefined
+    if (!childPath || childPath.length === 0) {
+      console.log('❌ Child path is empty or undefined');
+      return false;
+    }
+    if (!parentPath || parentPath.length === 0) {
+      console.log('❌ Parent path is empty or undefined');
+      return false;
+    }
+
+    // For any filter (single category or path), check if it's a prefix of the child path
+    // or if any category in the child path matches the filter
+    for (let i = 0; i <= childPath.length - parentPath.length; i++) {
+      let matches = true;
+      
+      // Try to match the parent path starting at this position
+      for (let j = 0; j < parentPath.length; j++) {
+        const parentCat = parentPath[j];
+        const childCat = childPath[i + j];
+        
+        console.log(`Comparing [${i + j}]:`, {
+          parent: `${parentCat.name} (${parentCat.level})`,
+          child: childCat ? `${childCat.name} (${childCat.level})` : 'undefined'
+        });
+        
+        // If we're checking a single category filter (like "Lips")
+        if (parentPath.length === 1) {
+          // Just check if this category exists anywhere in the path
+          if (childCat && childCat.name === parentCat.name) {
+            console.log(`✅ Single category match found at position ${i + j}`);
+            return true;
+          }
+          continue;
+        }
+        
+        // For full path matching, all categories must match in sequence
+        if (!childCat || childCat.name !== parentCat.name) {
+          matches = false;
+          break;
+        }
+      }
+      
+      if (matches) {
+        console.log(`✅ Path match found starting at position ${i}`);
+        return true;
+      }
+    }
+    
+    console.log('❌ No match found');
+    return false;
+  };
+
   useEffect(() => {
     let filtered = state.wishlist;
     
     // Apply category filter from quick filters
     if (selectedCategory) {
-      filtered = filtered.filter(product => product.mainCategory === selectedCategory);
+      filtered = filtered.filter(product => {
+        // If product has no category path, check main category only
+        if (!product.categoryPath || product.categoryPath.length === 0) {
+          return product.mainCategory === selectedCategory;
+        }
+        
+        // For products with category path, check if it starts with the selected category
+        // or if any category in the path matches the selected category
+        return product.categoryPath.some(cat => cat.name === selectedCategory);
+      });
     }
     
     // Apply search filter
@@ -212,13 +279,50 @@ const WishlistScreen: React.FC<WishlistScreenProps> = ({ navigation }) => {
 
     // Apply advanced filters
     const categoryPath = filters.categoryPath;
+    console.log('\n=== APPLYING ADVANCED FILTERS ===');
+    
     if (categoryPath && categoryPath.length > 0) {
-      const deepCategory = categoryPath[categoryPath.length - 1];
-      filtered = filtered.filter(product => 
-        product.categoryPath?.some(cat => cat.id === deepCategory.id)
-      );
+      console.log('\nApplying Category Path Filter');
+
+      // Get the parent category (usually the first one, like "Lips")
+      const parentCategory = categoryPath[0];
+      console.log('Parent category:', parentCategory ? `${parentCategory.name} (${parentCategory.level})` : 'none');
+
+      filtered = filtered.filter(product => {
+        console.log(`\nChecking product: ${product.name}`);
+        console.log('Product data:', {
+          mainCategory: product.mainCategory,
+          categoryPath: product.categoryPath?.map(c => `${c.name} (${c.level})`) || 'NO_PATH'
+        });
+        
+        // Handle products with no category path
+        if (!product.categoryPath || product.categoryPath.length === 0) {
+          const matches = product.mainCategory === parentCategory.name;
+          console.log('No category path - checking main category only:', matches);
+          return matches;
+        }
+        
+        // First, check if the product has the parent category
+        const hasParentCategory = product.categoryPath.some(cat => cat.name === parentCategory.name);
+        if (!hasParentCategory) {
+          console.log('Product does not have parent category:', parentCategory.name);
+          return false;
+        }
+
+        console.log('✅ Product has parent category:', parentCategory.name);
+        return true;
+      });
     } else if (filters.category) {
-      filtered = filtered.filter(product => product.mainCategory === filters.category);
+      // Main category filter should include all products under that category
+      filtered = filtered.filter(product => {
+        // If no category path, check main category
+        if (!product.categoryPath || product.categoryPath.length === 0) {
+          return product.mainCategory === filters.category;
+        }
+        
+        // Check if any category in the path matches the filter category
+        return product.categoryPath.some(cat => cat.name === filters.category);
+      });
     }
 
     if (filters.brand) {

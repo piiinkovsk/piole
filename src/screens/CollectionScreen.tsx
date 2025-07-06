@@ -194,12 +194,102 @@ const CollectionScreen: React.FC<CollectionScreenProps> = ({ navigation }) => {
     });
   }, [navigation, colors]);
 
+  // Helper function to check if a category is a child of another
+  const isCategoryChildOf = (childPath: CategoryPath[], parentPath: CategoryPath[]): boolean => {
+    console.log('\n=== CATEGORY MATCH CHECK ===');
+    console.log('Child Path:', childPath ? childPath.map(c => `${c.name} (${c.level})`) : 'undefined');
+    console.log('Parent Path:', parentPath ? parentPath.map(c => `${c.name} (${c.level})`) : 'undefined');
+    
+    // Handle cases where paths are empty or undefined
+    if (!childPath || childPath.length === 0) {
+      console.log('❌ Child path is empty or undefined');
+      return false;
+    }
+    if (!parentPath || parentPath.length === 0) {
+      console.log('❌ Parent path is empty or undefined');
+      return false;
+    }
+
+    // For any filter (single category or path), check if it's a prefix of the child path
+    // or if any category in the child path matches the filter
+    for (let i = 0; i <= childPath.length - parentPath.length; i++) {
+      let matches = true;
+      
+      // Try to match the parent path starting at this position
+      for (let j = 0; j < parentPath.length; j++) {
+        const parentCat = parentPath[j];
+        const childCat = childPath[i + j];
+        
+        console.log(`Comparing [${i + j}]:`, {
+          parent: `${parentCat.name} (${parentCat.level})`,
+          child: childCat ? `${childCat.name} (${childCat.level})` : 'undefined'
+        });
+        
+        // If we're checking a single category filter (like "Lips")
+        if (parentPath.length === 1) {
+          // Just check if this category exists anywhere in the path
+          if (childCat && childCat.name === parentCat.name) {
+            console.log(`✅ Single category match found at position ${i + j}`);
+            return true;
+          }
+          continue;
+        }
+        
+        // For full path matching, all categories must match in sequence
+        if (!childCat || childCat.name !== parentCat.name) {
+          matches = false;
+          break;
+        }
+      }
+      
+      if (matches) {
+        console.log(`✅ Path match found starting at position ${i}`);
+        return true;
+      }
+    }
+    
+    console.log('❌ No match found');
+    return false;
+  };
+
   useEffect(() => {
+    console.log('\n=== STARTING FILTER PROCESS ===');
+    console.log('Filter State:', {
+      selectedCategory,
+      filters,
+      searchQuery
+    });
+
     let filtered = state.collection;
+    console.log('\nInitial Products:', filtered.map(p => ({
+      id: p.id,
+      name: p.name,
+      mainCategory: p.mainCategory,
+      categoryPath: p.categoryPath ? p.categoryPath.map(c => ({
+        id: c.id,
+        name: c.name,
+        level: c.level
+      })) : 'NO_PATH'
+    })));
     
     // Apply category filter from quick filters
     if (selectedCategory) {
-      filtered = filtered.filter(product => product.mainCategory === selectedCategory);
+      console.log('Applying quick filter for category:', selectedCategory);
+      filtered = filtered.filter(product => {
+        // If product has no category path, check main category only
+        if (!product.categoryPath || product.categoryPath.length === 0) {
+          const matches = product.mainCategory === selectedCategory;
+          console.log('Product with no path:', product.name, matches);
+          return matches;
+        }
+        
+        // For products with category path, check if it starts with the selected category
+        // or if any category in the path matches the selected category
+        const matches = product.categoryPath.some(cat => cat.name === selectedCategory);
+        console.log('Checking product:', product.name, 'Path:', product.categoryPath.map(c => c.name).join(' → '), 'Matches:', matches);
+        return matches;
+      });
+      console.log('After quick filter:', filtered.length, 'products remain');
     }
     
     // Apply search filter
@@ -213,20 +303,83 @@ const CollectionScreen: React.FC<CollectionScreenProps> = ({ navigation }) => {
     }
 
     // Apply advanced filters
+    console.log('\n=== APPLYING ADVANCED FILTERS ===');
+    
     const categoryPath = filters.categoryPath;
+    const mainCategory = filters.category;
+    
+    console.log('Filter Criteria:', {
+      categoryPath: categoryPath?.map(c => `${c.name} (${c.level})`),
+      mainCategory
+    });
+    
     if (categoryPath && categoryPath.length > 0) {
-      const deepCategory = categoryPath[categoryPath.length - 1];
-      filtered = filtered.filter(product => 
-        product.categoryPath?.some(cat => cat.id === deepCategory.id)
-      );
-    } else if (filters.category) {
-      filtered = filtered.filter(product => product.mainCategory === filters.category);
+      console.log('\nApplying Category Path Filter');
+
+      // Get the parent category (usually the first one, like "Lips")
+      const parentCategory = categoryPath[0];
+      console.log('Parent category:', parentCategory ? `${parentCategory.name} (${parentCategory.level})` : 'none');
+
+      filtered = filtered.filter(product => {
+        console.log(`\nChecking product: ${product.name}`);
+        console.log('Product data:', {
+          mainCategory: product.mainCategory,
+          categoryPath: product.categoryPath?.map(c => `${c.name} (${c.level})`) || 'NO_PATH'
+        });
+        
+        // Handle products with no category path
+        if (!product.categoryPath || product.categoryPath.length === 0) {
+          const matches = product.mainCategory === parentCategory.name;
+          console.log('No category path - checking main category only:', matches);
+          return matches;
+        }
+        
+        // First, check if the product has the parent category
+        const hasParentCategory = product.categoryPath.some(cat => cat.name === parentCategory.name);
+        if (!hasParentCategory) {
+          console.log('Product does not have parent category:', parentCategory.name);
+          return false;
+        }
+
+        console.log('✅ Product has parent category:', parentCategory.name);
+        return true;
+      });
+      
+    } else if (mainCategory) {
+      console.log('\nApplying Main Category Filter:', mainCategory);
+      filtered = filtered.filter(product => {
+        console.log(`\nChecking product: ${product.name}`);
+        console.log('Product data:', {
+          mainCategory: product.mainCategory,
+          categoryPath: product.categoryPath?.map(c => `${c.name} (${c.level})`) || 'NO_PATH'
+        });
+        
+        // Handle products with no category path
+        if (!product.categoryPath || product.categoryPath.length === 0) {
+          const matches = product.mainCategory === mainCategory;
+          console.log('No category path - checking main category only:', matches);
+          return matches;
+        }
+        
+        // Check if the main category exists anywhere in the path
+        const matches = product.categoryPath.some(cat => cat.name === mainCategory);
+        console.log('Category match result:', matches);
+        return matches;
+      });
     }
 
     if (filters.brand) {
+      console.log('\nApplying Brand Filter:', filters.brand);
       const brandQuery = filters.brand.toLowerCase();
       filtered = filtered.filter(product => product.brand.toLowerCase().includes(brandQuery));
     }
+
+    console.log('\n=== FILTER RESULTS ===');
+    console.log('Filtered Products:', filtered.map(p => ({
+      name: p.name,
+      mainCategory: p.mainCategory,
+      categoryPath: p.categoryPath?.map(c => `${c.name} (${c.level})`) || 'NO_PATH'
+    })));
 
     setFilteredProducts(filtered);
   }, [state.collection, searchQuery, selectedCategory, filters]);
