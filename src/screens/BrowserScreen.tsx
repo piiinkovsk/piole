@@ -289,6 +289,7 @@ const BrowserScreen: React.FC = () => {
   const [canGoForward, setCanGoForward] = useState(false);
   const [isWishlist, setIsWishlist] = useState(false);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [lastScreen, setLastScreen] = useState<'Collection' | 'Wishlist' | null>(null);
   const [previewData, setPreviewData] = useState<PreviewData>({
     name: '',
     brand: '',
@@ -297,6 +298,19 @@ const BrowserScreen: React.FC = () => {
     mainCategory: MainCategory.OTHER,
     purchaseLink: '',
   });
+
+  // Track the last screen for back navigation
+  React.useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      const routes = navigation.getState().routes;
+      const previousRoute = routes[routes.length - 2];
+      if (previousRoute?.name === 'Collection' || previousRoute?.name === 'Wishlist') {
+        setLastScreen(previousRoute.name);
+      }
+    });
+
+    return unsubscribe;
+  }, [navigation]);
 
   // Handle back navigation
   const handleBack = async () => {
@@ -308,8 +322,14 @@ const BrowserScreen: React.FC = () => {
       webViewRef.current?.goBack();
       return;
     }
-    // Return to previous screen
-    navigation.goBack();
+    // Return to the previous screen with proper typing
+    if (lastScreen === 'Collection') {
+      navigation.navigate('Collection', { screen: 'CollectionHome' });
+    } else if (lastScreen === 'Wishlist') {
+      navigation.navigate('Wishlist', { screen: 'WishlistHome' });
+    } else {
+      navigation.navigate('Collection', { screen: 'CollectionHome' });
+    }
   };
 
   const extractMetadata = () => {
@@ -461,14 +481,14 @@ const BrowserScreen: React.FC = () => {
       
       const productData = {
         id,
-        name: previewData.name || 'Untitled Product',
-        brand: previewData.brand || '',
-        mainCategory: previewData.mainCategory,
-        categoryPath,
+        name: updatedData.name || 'Untitled Product',
+        brand: updatedData.brand || '',
+        mainCategory: updatedData.mainCategory,
+        categoryPath: updatedData.categoryPath,
         subCategories: [],
-        imageUrl: previewData.imageUrl || '',
-        purchaseLink: previewData.purchaseLink || currentUrl,
-        price: previewData.price ? parseFloat(previewData.price) : undefined,
+        imageUrl: updatedData.imageUrl || '',
+        purchaseLink: updatedData.purchaseLink || currentUrl,
+        price: updatedData.price ? parseFloat(updatedData.price) : undefined,
         createdAt: timestamp,
         updatedAt: timestamp,
       };
@@ -502,30 +522,77 @@ const BrowserScreen: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
-      <View style={styles.searchBar}>
-        <TouchableOpacity
-          onPress={handleBack}
-          style={[styles.backButton, { marginRight: 8 }]}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { paddingTop: insets.top }]}>
+        <View style={styles.topBar}>
+          <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+            <Ionicons 
+              name={canGoBack ? "arrow-back" : "chevron-back"} 
+              size={24} 
+              color={colors.text} 
+            />
+          </TouchableOpacity>
+          
+          <View style={[styles.searchBar, { backgroundColor: colors.card }]}>
+            <TextInput
+              style={[styles.urlInput, { color: colors.text }]}
+              value={urlInput}
+              onChangeText={setUrlInput}
+              onSubmitEditing={() => {
+                const processedUrl = urlInput.startsWith('http') ? urlInput : `https://${urlInput}`;
+                setCurrentUrl(processedUrl);
+              }}
+              keyboardType="url"
+              autoCapitalize="none"
+              autoCorrect={false}
+              placeholder="Enter URL"
+              placeholderTextColor={colors.secondaryText}
+              selectTextOnFocus
+            />
+            {isLoading ? (
+              <ActivityIndicator size="small" color={colors.primary} style={styles.loader} />
+            ) : (
+              <TouchableOpacity 
+                style={styles.refreshButton}
+                onPress={() => webViewRef.current?.reload()}
+              >
+                <Ionicons name="refresh" size={20} color={colors.text} />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
 
-        <TextInput
-          style={[styles.urlInput, { color: colors.text, backgroundColor: colors.card }]}
-          value={urlInput}
-          onChangeText={setUrlInput}
-          onSubmitEditing={() => {
-            const processedUrl = urlInput.startsWith('http') ? urlInput : `https://${urlInput}`;
-            setCurrentUrl(processedUrl);
-          }}
-          keyboardType="url"
-          autoCapitalize="none"
-          autoCorrect={false}
-          placeholder="Enter URL"
-          placeholderTextColor={colors.secondaryText}
-          selectTextOnFocus
-        />
+        <View style={styles.browserToolbar}>
+          <TouchableOpacity
+            style={[styles.toolbarButton, canGoBack ? null : styles.disabledButton]}
+            onPress={() => canGoBack && webViewRef.current?.goBack()}
+            disabled={!canGoBack}
+          >
+            <Ionicons name="arrow-back" size={20} color={colors.text} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.toolbarButton, canGoForward ? null : styles.disabledButton]}
+            onPress={() => canGoForward && webViewRef.current?.goForward()}
+            disabled={!canGoForward}
+          >
+            <Ionicons name="arrow-forward" size={20} color={colors.text} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.toolbarButton}
+            onPress={() => handleQuickAdd(false)}
+          >
+            <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.toolbarButton}
+            onPress={() => handleQuickAdd(true)}
+          >
+            <Ionicons name="heart-outline" size={20} color={colors.primary} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.webViewContainer}>
@@ -553,52 +620,6 @@ const BrowserScreen: React.FC = () => {
             }
           }}
         />
-        {isLoading && (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.primary} />
-          </View>
-        )}
-      </View>
-
-      <View style={[styles.bottomToolbar, { backgroundColor: colors.card, paddingBottom: insets.bottom }]}>
-        <View style={styles.toolbarContent}>
-          <TouchableOpacity
-            style={[styles.toolbarButton, canGoBack ? null : styles.disabledButton]}
-            onPress={() => canGoBack && webViewRef.current?.goBack()}
-            disabled={!canGoBack}
-          >
-            <Ionicons name="arrow-back" size={24} color={colors.text} />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.toolbarButton, canGoForward ? null : styles.disabledButton]}
-            onPress={() => canGoForward && webViewRef.current?.goForward()}
-            disabled={!canGoForward}
-          >
-            <Ionicons name="arrow-forward" size={24} color={colors.text} />
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={[styles.toolbarButton, { backgroundColor: colors.primary }]}
-            onPress={() => handleQuickAdd(false)}
-          >
-            <Ionicons name="add-circle-outline" size={24} color="white" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.toolbarButton, { backgroundColor: colors.primary }]}
-            onPress={() => handleQuickAdd(true)}
-          >
-            <Ionicons name="heart-outline" size={24} color="white" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.toolbarButton}
-            onPress={() => webViewRef.current?.reload()}
-          >
-            <Ionicons name="refresh" size={24} color={colors.text} />
-          </TouchableOpacity>
-        </View>
       </View>
 
       <QuickAddModal
@@ -608,7 +629,7 @@ const BrowserScreen: React.FC = () => {
         previewData={previewData}
         isWishlist={isWishlist}
       />
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -616,20 +637,45 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  searchBar: {
+  header: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(0,0,0,0.1)',
+  },
+  topBar: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingVertical: 8,
+    gap: 8,
+  },
+  browserToolbar: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    height: 44,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: 'transparent',
+  },
+  searchBar: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
   },
   urlInput: {
     flex: 1,
     fontSize: 16,
     height: 36,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    marginVertical: 4,
+    marginRight: 8,
+  },
+  loader: {
+    marginLeft: 8,
+  },
+  refreshButton: {
+    padding: 4,
   },
   webViewContainer: {
     flex: 1,
@@ -643,12 +689,14 @@ const styles = StyleSheet.create({
   },
   bottomToolbar: {
     borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(0,0,0,0.1)',
   },
   toolbarContent: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'center',
     alignItems: 'center',
-    height: 44,
+    height: 56,
+    gap: 16,
   },
   toolbarButton: {
     width: 36,
@@ -656,9 +704,17 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
+    marginHorizontal: 4,
   },
   disabledButton: {
     opacity: 0.5,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   // Modal styles
   modalContainer: {
@@ -749,13 +805,6 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },

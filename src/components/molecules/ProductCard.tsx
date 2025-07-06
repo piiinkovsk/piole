@@ -57,7 +57,13 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, isWishlist = false, 
         <View style={styles.overlayContainer}>
           <View style={styles.chipsContainer}>
             <View style={[styles.categoryChip, { backgroundColor: colors.primary }]}>
-              <Text style={styles.chipText}>{product.mainCategory}</Text>
+              <Text style={styles.chipText}>
+                {product.categoryPath ? 
+                  // Show the most specific (last) category in the path
+                  product.categoryPath[product.categoryPath.length - 1]?.name || 
+                  product.mainCategory : 
+                  product.mainCategory}
+              </Text>
             </View>
           </View>
         </View>
