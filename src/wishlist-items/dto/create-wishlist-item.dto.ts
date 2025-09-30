@@ -1,5 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEnum, IsNotEmpty, IsOptional, IsString, IsUUID } from 'class-validator';
+import {
+  IsEnum,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUUID,
+} from 'class-validator';
 
 export enum Priority {
   LOW = 0,
@@ -13,7 +19,11 @@ export class CreateWishlistItemDto {
   @IsNotEmpty()
   productId: string;
 
-  @ApiProperty({ enum: Priority, example: Priority.MEDIUM, default: Priority.LOW })
+  @ApiProperty({
+    enum: Priority,
+    example: Priority.MEDIUM,
+    default: Priority.LOW,
+  })
   @IsEnum(Priority)
   @IsOptional()
   priority?: Priority = Priority.LOW;

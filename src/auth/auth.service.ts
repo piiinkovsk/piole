@@ -15,17 +15,17 @@ export class AuthService {
 
   async validateUser(email: string, password: string): Promise<any> {
     const user = await this.prisma.user.findUnique({ where: { email } });
-    
+
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
-    
+
     const passwordValid = await bcrypt.compare(password, user.passwordHash);
-    
+
     if (!passwordValid) {
       throw new UnauthorizedException('Invalid credentials');
     }
-    
+
     const { passwordHash, ...result } = user;
     return result;
   }
@@ -35,7 +35,7 @@ export class AuthService {
       sub: user.id,
       email: user.email,
     };
-    
+
     return {
       accessToken: this.jwtService.sign(payload),
       user: {

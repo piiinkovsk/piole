@@ -1,4 +1,8 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCollectionDto } from './dto/create-collection.dto';
 import { UpdateCollectionDto } from './dto/update-collection.dto';
@@ -21,7 +25,9 @@ export class CollectionsService {
     });
 
     if (existingCollection) {
-      throw new ConflictException(`Collection with name "${createCollectionDto.name}" already exists`);
+      throw new ConflictException(
+        `Collection with name "${createCollectionDto.name}" already exists`,
+      );
     }
 
     return this.prisma.collection.create({
@@ -33,14 +39,16 @@ export class CollectionsService {
   }
   async findAll(userId: string, query: PaginationQueryDto) {
     const { limit = 10, offset = 0, search } = query;
-    
+
     const where = {
       userId,
-      ...(search ? {
-        name: { contains: search, mode: 'insensitive' as const },
-      } : {}),
+      ...(search
+        ? {
+            name: { contains: search, mode: 'insensitive' as const },
+          }
+        : {}),
     };
-    
+
     const [data, total] = await Promise.all([
       this.prisma.collection.findMany({
         where,
@@ -53,19 +61,19 @@ export class CollectionsService {
       this.prisma.collection.count({ where }),
     ]);
 
-    return { 
-      data, 
-      meta: { 
-        total, 
-        limit, 
-        offset 
-      } 
+    return {
+      data,
+      meta: {
+        total,
+        limit,
+        offset,
+      },
     };
   }
 
   async findOne(userId: string, id: string) {
     const collection = await this.prisma.collection.findFirst({
-      where: { 
+      where: {
         id,
         userId,
       },
@@ -89,10 +97,14 @@ export class CollectionsService {
     return collection;
   }
 
-  async update(userId: string, id: string, updateCollectionDto: UpdateCollectionDto) {
+  async update(
+    userId: string,
+    id: string,
+    updateCollectionDto: UpdateCollectionDto,
+  ) {
     // Check if collection exists and belongs to user
     const existingCollection = await this.prisma.collection.findFirst({
-      where: { 
+      where: {
         id,
         userId,
       },
@@ -103,7 +115,10 @@ export class CollectionsService {
     }
 
     // If name is being updated, check for conflicts
-    if (updateCollectionDto.name && updateCollectionDto.name !== existingCollection.name) {
+    if (
+      updateCollectionDto.name &&
+      updateCollectionDto.name !== existingCollection.name
+    ) {
       const nameExists = await this.prisma.collection.findUnique({
         where: {
           userId_name: {
@@ -114,7 +129,9 @@ export class CollectionsService {
       });
 
       if (nameExists) {
-        throw new ConflictException(`Collection with name "${updateCollectionDto.name}" already exists`);
+        throw new ConflictException(
+          `Collection with name "${updateCollectionDto.name}" already exists`,
+        );
       }
     }
 
@@ -127,7 +144,7 @@ export class CollectionsService {
   async remove(userId: string, id: string) {
     // Check if collection exists and belongs to user
     const existingCollection = await this.prisma.collection.findFirst({
-      where: { 
+      where: {
         id,
         userId,
       },
@@ -142,17 +159,23 @@ export class CollectionsService {
     });
   }
 
-  async addToCollection(userId: string, collectionId: string, addToCollectionDto: AddToCollectionDto) {
+  async addToCollection(
+    userId: string,
+    collectionId: string,
+    addToCollectionDto: AddToCollectionDto,
+  ) {
     // Check if collection exists and belongs to user
     const collection = await this.prisma.collection.findFirst({
-      where: { 
+      where: {
         id: collectionId,
         userId,
       },
     });
 
     if (!collection) {
-      throw new NotFoundException(`Collection with ID ${collectionId} not found`);
+      throw new NotFoundException(
+        `Collection with ID ${collectionId} not found`,
+      );
     }
 
     // Check if product exists
@@ -161,7 +184,9 @@ export class CollectionsService {
     });
 
     if (!product) {
-      throw new NotFoundException(`Product with ID ${addToCollectionDto.productId} not found`);
+      throw new NotFoundException(
+        `Product with ID ${addToCollectionDto.productId} not found`,
+      );
     }
 
     // Check if product is already in collection
@@ -193,61 +218,75 @@ export class CollectionsService {
     });
   }
 
-  async removeFromCollection(userId: string, collectionId: string, itemId: string) {
+  async removeFromCollection(
+    userId: string,
+    collectionId: string,
+    itemId: string,
+  ) {
     // Check if collection exists and belongs to user
     const collection = await this.prisma.collection.findFirst({
-      where: { 
+      where: {
         id: collectionId,
         userId,
       },
     });
 
     if (!collection) {
-      throw new NotFoundException(`Collection with ID ${collectionId} not found`);
+      throw new NotFoundException(
+        `Collection with ID ${collectionId} not found`,
+      );
     }
 
     // Check if item exists and belongs to collection
     const item = await this.prisma.collectionItem.findFirst({
-      where: { 
+      where: {
         id: itemId,
         collectionId,
       },
     });
 
     if (!item) {
-      throw new NotFoundException(`Item with ID ${itemId} not found in collection`);
+      throw new NotFoundException(
+        `Item with ID ${itemId} not found in collection`,
+      );
     }
 
     return this.prisma.collectionItem.delete({
       where: { id: itemId },
     });
   }
-  async getCollectionProducts(userId: string, collectionId: string, query: PaginationQueryDto) {
+  async getCollectionProducts(
+    userId: string,
+    collectionId: string,
+    query: PaginationQueryDto,
+  ) {
     const { limit = 10, offset = 0, search } = query;
-    
+
     // Check if collection exists and belongs to user
     const collection = await this.prisma.collection.findFirst({
-      where: { 
+      where: {
         id: collectionId,
         userId,
       },
     });
 
     if (!collection) {
-      throw new NotFoundException(`Collection with ID ${collectionId} not found`);
+      throw new NotFoundException(
+        `Collection with ID ${collectionId} not found`,
+      );
     }
-    
+
     // First, get the collection items to find product IDs
     const collectionItems = await this.prisma.collectionItem.findMany({
       where: { collectionId },
       select: { productId: true },
     });
-    
-    const productIds = collectionItems.map(item => item.productId);
-    
+
+    const productIds = collectionItems.map((item) => item.productId);
+
     // Now find products with those IDs
     let where: any = { id: { in: productIds } };
-    
+
     // Add search if provided
     if (search) {
       where = {
@@ -259,7 +298,7 @@ export class CollectionsService {
         ],
       };
     }
-    
+
     const [products, total] = await Promise.all([
       this.prisma.product.findMany({
         where,
@@ -275,13 +314,13 @@ export class CollectionsService {
       this.prisma.product.count({ where }),
     ]);
 
-    return { 
+    return {
       data: products,
-      meta: { 
-        total, 
-        limit, 
-        offset 
-      } 
+      meta: {
+        total,
+        limit,
+        offset,
+      },
     };
   }
 }

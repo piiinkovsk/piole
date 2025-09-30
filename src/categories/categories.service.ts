@@ -10,22 +10,22 @@ const mockCategories = [
     name: 'Foundation',
     description: 'Face makeup products that create an even skin tone base',
     createdAt: new Date(),
-    updatedAt: new Date()
+    updatedAt: new Date(),
   },
   {
     id: '2',
     name: 'Eyeshadow',
     description: 'Products for coloring the eyelids',
     createdAt: new Date(),
-    updatedAt: new Date()
+    updatedAt: new Date(),
   },
   {
     id: '3',
     name: 'Lipstick',
     description: 'Lip color products',
     createdAt: new Date(),
-    updatedAt: new Date()
-  }
+    updatedAt: new Date(),
+  },
 ];
 
 @Injectable()
@@ -41,12 +41,13 @@ export class CategoriesService {
         data: createCategoryDto,
       });
     } catch (error) {
-      this.logger.warn('Using mock data for create operation', error.message);      const newCategory = {
+      this.logger.warn('Using mock data for create operation', error.message);
+      const newCategory = {
         id: Date.now().toString(),
         name: createCategoryDto.name,
         description: createCategoryDto.description || '',
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
       };
       this.categories.push(newCategory);
       return newCategory;
@@ -75,12 +76,12 @@ export class CategoriesService {
       return category;
     } catch (error) {
       this.logger.warn('Using mock data for findOne operation', error.message);
-      const category = this.categories.find(c => c.id === id);
-      
+      const category = this.categories.find((c) => c.id === id);
+
       if (!category) {
         throw new NotFoundException(`Category with ID ${id} not found`);
       }
-      
+
       return category;
     }
   }
@@ -92,18 +93,18 @@ export class CategoriesService {
       });
     } catch (error) {
       this.logger.warn('Using mock data for update operation', error.message);
-      const index = this.categories.findIndex(c => c.id === id);
-      
+      const index = this.categories.findIndex((c) => c.id === id);
+
       if (index === -1) {
         throw new NotFoundException(`Category with ID ${id} not found`);
       }
-      
+
       const updatedCategory = {
         ...this.categories[index],
         ...updateCategoryDto,
-        updatedAt: new Date()
+        updatedAt: new Date(),
       };
-      
+
       this.categories[index] = updatedCategory;
       return updatedCategory;
     }
@@ -116,12 +117,12 @@ export class CategoriesService {
       });
     } catch (error) {
       this.logger.warn('Using mock data for remove operation', error.message);
-      const index = this.categories.findIndex(c => c.id === id);
-      
+      const index = this.categories.findIndex((c) => c.id === id);
+
       if (index === -1) {
         throw new NotFoundException(`Category with ID ${id} not found`);
       }
-      
+
       const deletedCategory = this.categories[index];
       this.categories.splice(index, 1);
       return deletedCategory;

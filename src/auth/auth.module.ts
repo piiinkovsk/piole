@@ -11,7 +11,7 @@ import { AuthController } from './auth.controller';
 
 @Module({
   imports: [
-    PrismaModule, 
+    PrismaModule,
     UsersModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({

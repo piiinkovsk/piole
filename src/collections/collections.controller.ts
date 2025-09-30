@@ -13,7 +13,12 @@ import { CollectionsService } from './collections.service';
 import { CreateCollectionDto } from './dto/create-collection.dto';
 import { UpdateCollectionDto } from './dto/update-collection.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { AddToCollectionDto } from './dto/add-to-collection.dto';
@@ -27,7 +32,10 @@ export class CollectionsController {
 
   @ApiOperation({ summary: 'Create a new collection' })
   @ApiResponse({ status: 201, description: 'Collection created successfully' })
-  @ApiResponse({ status: 409, description: 'Collection with this name already exists' })
+  @ApiResponse({
+    status: 409,
+    description: 'Collection with this name already exists',
+  })
   @Post()
   create(
     @CurrentUser() user,
@@ -39,28 +47,28 @@ export class CollectionsController {
   @ApiOperation({ summary: 'Get all collections with pagination and search' })
   @ApiResponse({ status: 200, description: 'Returns all collections' })
   @Get()
-  findAll(
-    @CurrentUser() user,
-    @Query() query: PaginationQueryDto,
-  ) {
+  findAll(@CurrentUser() user, @Query() query: PaginationQueryDto) {
     return this.collectionsService.findAll(user.id, query);
   }
 
   @ApiOperation({ summary: 'Get collection by ID' })
-  @ApiResponse({ status: 200, description: 'Returns the collection with its items' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns the collection with its items',
+  })
   @ApiResponse({ status: 404, description: 'Collection not found' })
   @Get(':id')
-  findOne(
-    @CurrentUser() user,
-    @Param('id') id: string,
-  ) {
+  findOne(@CurrentUser() user, @Param('id') id: string) {
     return this.collectionsService.findOne(user.id, id);
   }
 
   @ApiOperation({ summary: 'Update collection' })
   @ApiResponse({ status: 200, description: 'Collection updated successfully' })
   @ApiResponse({ status: 404, description: 'Collection not found' })
-  @ApiResponse({ status: 409, description: 'Collection with this name already exists' })
+  @ApiResponse({
+    status: 409,
+    description: 'Collection with this name already exists',
+  })
   @Patch(':id')
   update(
     @CurrentUser() user,
@@ -74,15 +82,15 @@ export class CollectionsController {
   @ApiResponse({ status: 200, description: 'Collection deleted successfully' })
   @ApiResponse({ status: 404, description: 'Collection not found' })
   @Delete(':id')
-  remove(
-    @CurrentUser() user,
-    @Param('id') id: string,
-  ) {
+  remove(@CurrentUser() user, @Param('id') id: string) {
     return this.collectionsService.remove(user.id, id);
   }
 
   @ApiOperation({ summary: 'Add product to collection' })
-  @ApiResponse({ status: 201, description: 'Product added to collection successfully' })
+  @ApiResponse({
+    status: 201,
+    description: 'Product added to collection successfully',
+  })
   @ApiResponse({ status: 404, description: 'Collection or product not found' })
   @ApiResponse({ status: 409, description: 'Product already in collection' })
   @Post(':id/items')
@@ -91,11 +99,18 @@ export class CollectionsController {
     @Param('id') id: string,
     @Body() addToCollectionDto: AddToCollectionDto,
   ) {
-    return this.collectionsService.addToCollection(user.id, id, addToCollectionDto);
+    return this.collectionsService.addToCollection(
+      user.id,
+      id,
+      addToCollectionDto,
+    );
   }
 
   @ApiOperation({ summary: 'Remove product from collection' })
-  @ApiResponse({ status: 200, description: 'Product removed from collection successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Product removed from collection successfully',
+  })
   @ApiResponse({ status: 404, description: 'Collection or item not found' })
   @Delete(':id/items/:itemId')
   removeFromCollection(
@@ -107,7 +122,10 @@ export class CollectionsController {
   }
 
   @ApiOperation({ summary: 'Get products in a collection' })
-  @ApiResponse({ status: 200, description: 'Returns all products in the collection' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns all products in the collection',
+  })
   @ApiResponse({ status: 404, description: 'Collection not found' })
   @Get(':id/products')
   getCollectionProducts(

@@ -13,7 +13,12 @@ import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 
 @ApiTags('products')
@@ -29,12 +34,12 @@ export class ProductsController {
   create(@Body() createProductDto: CreateProductDto) {
     return this.productsService.create(createProductDto);
   }
-  @ApiOperation({ summary: 'Get all products with pagination, search, and category filter' })
+  @ApiOperation({
+    summary: 'Get all products with pagination, search, and category filter',
+  })
   @ApiResponse({ status: 200, description: 'Returns all products' })
   @Get()
-  findAll(
-    @Query() query: PaginationQueryDto & { categoryId?: string }
-  ) {
+  findAll(@Query() query: PaginationQueryDto & { categoryId?: string }) {
     return this.productsService.findAll(query);
   }
 
@@ -67,7 +72,10 @@ export class ProductsController {
   }
 
   @ApiOperation({ summary: 'Get top products by popularity' })
-  @ApiResponse({ status: 200, description: 'Returns most popular products based on wishlist counts' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns most popular products based on wishlist counts',
+  })
   @Get('top')
   findTopProducts(@Query('limit') limit?: number) {
     return this.productsService.findTopProducts(limit);

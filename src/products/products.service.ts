@@ -21,7 +21,9 @@ export class ProductsService {
     });
 
     if (!categoryExists) {
-      throw new NotFoundException(`Category with ID ${createProductDto.categoryId} not found`);
+      throw new NotFoundException(
+        `Category with ID ${createProductDto.categoryId} not found`,
+      );
     }
 
     return this.prisma.product.create({
@@ -33,10 +35,10 @@ export class ProductsService {
   }
   async findAll(query: PaginationQueryDto & { categoryId?: string }) {
     const { limit = 10, offset = 0, search, categoryId } = query;
-    
+
     // Build the where condition
-    let where: any = {};
-    
+    const where: any = {};
+
     // Add search if provided
     if (search) {
       where.OR = [
@@ -45,12 +47,12 @@ export class ProductsService {
         { description: { contains: search, mode: 'insensitive' } },
       ];
     }
-    
+
     // Add category filter if provided
     if (categoryId) {
       where.categoryId = categoryId;
     }
-    
+
     const [data, total] = await Promise.all([
       this.prisma.product.findMany({
         where,
@@ -66,13 +68,13 @@ export class ProductsService {
       this.prisma.product.count({ where }),
     ]);
 
-    return { 
-      data, 
-      meta: { 
-        total, 
-        limit, 
-        offset 
-      } 
+    return {
+      data,
+      meta: {
+        total,
+        limit,
+        offset,
+      },
     };
   }
 
@@ -99,7 +101,9 @@ export class ProductsService {
       });
 
       if (!categoryExists) {
-        throw new NotFoundException(`Category with ID ${updateProductDto.categoryId} not found`);
+        throw new NotFoundException(
+          `Category with ID ${updateProductDto.categoryId} not found`,
+        );
       }
     }
 

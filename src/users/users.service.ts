@@ -1,4 +1,8 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import * as bcrypt from 'bcrypt';
@@ -73,11 +77,7 @@ export class UsersService {
 
   async getUserStats(userId: string) {
     // Get counts of wishlist items and collections
-    const [
-      wishlistCount,
-      collectionsCount,
-      topCategories
-    ] = await Promise.all([
+    const [wishlistCount, collectionsCount, topCategories] = await Promise.all([
       this.prisma.wishlistItem.count({
         where: { userId },
       }),

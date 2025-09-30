@@ -1,7 +1,12 @@
 import { Controller, Get, Param, UseGuards } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 
 @ApiTags('users')
@@ -10,7 +15,10 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @ApiOperation({ summary: 'Get current user information' })
-  @ApiResponse({ status: 200, description: 'Returns the current user information' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns the current user information',
+  })
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Get('me')

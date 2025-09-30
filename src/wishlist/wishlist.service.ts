@@ -1,4 +1,8 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateWishlistItemDto } from './dto/create-wishlist-item.dto';
 import { UpdateWishlistItemDto } from './dto/update-wishlist-item.dto';
@@ -15,7 +19,9 @@ export class WishlistService {
     });
 
     if (!product) {
-      throw new NotFoundException(`Product with ID ${createWishlistItemDto.productId} not found`);
+      throw new NotFoundException(
+        `Product with ID ${createWishlistItemDto.productId} not found`,
+      );
     }
 
     // Check if product is already in user's wishlist
@@ -49,10 +55,10 @@ export class WishlistService {
 
   async findAll(userId: string, query: PaginationQueryDto) {
     const { limit = 10, offset = 0, search } = query;
-    
+
     // Base where clause with user ID
     let where: any = { userId };
-    
+
     // Add search functionality if search term is provided
     if (search) {
       where = {
@@ -66,7 +72,7 @@ export class WishlistService {
         },
       };
     }
-    
+
     const [data, total] = await Promise.all([
       this.prisma.wishlistItem.findMany({
         where,
@@ -79,27 +85,24 @@ export class WishlistService {
             },
           },
         },
-        orderBy: [
-          { priority: 'desc' },
-          { createdAt: 'desc' },
-        ],
+        orderBy: [{ priority: 'desc' }, { createdAt: 'desc' }],
       }),
       this.prisma.wishlistItem.count({ where }),
     ]);
 
-    return { 
-      data, 
-      meta: { 
-        total, 
-        limit, 
-        offset 
-      } 
+    return {
+      data,
+      meta: {
+        total,
+        limit,
+        offset,
+      },
     };
   }
 
   async findOne(userId: string, id: string) {
     const wishlistItem = await this.prisma.wishlistItem.findFirst({
-      where: { 
+      where: {
         id,
         userId,
       },
@@ -119,10 +122,14 @@ export class WishlistService {
     return wishlistItem;
   }
 
-  async update(userId: string, id: string, updateWishlistItemDto: UpdateWishlistItemDto) {
+  async update(
+    userId: string,
+    id: string,
+    updateWishlistItemDto: UpdateWishlistItemDto,
+  ) {
     // Check if wishlist item exists and belongs to user
     const existingItem = await this.prisma.wishlistItem.findFirst({
-      where: { 
+      where: {
         id,
         userId,
       },
@@ -140,7 +147,9 @@ export class WishlistService {
       });
 
       if (!product) {
-        throw new NotFoundException(`Product with ID ${updateWishlistItemDto.productId} not found`);
+        throw new NotFoundException(
+          `Product with ID ${updateWishlistItemDto.productId} not found`,
+        );
       }
 
       // Check if product is already in user's wishlist
@@ -174,7 +183,7 @@ export class WishlistService {
   async remove(userId: string, id: string) {
     // Check if wishlist item exists and belongs to user
     const existingItem = await this.prisma.wishlistItem.findFirst({
-      where: { 
+      where: {
         id,
         userId,
       },

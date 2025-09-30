@@ -1,4 +1,9 @@
-import { INestApplication, Injectable, OnModuleInit, Logger } from '@nestjs/common';
+import {
+  INestApplication,
+  Injectable,
+  OnModuleInit,
+  Logger,
+} from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 
 @Injectable()
@@ -8,7 +13,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
   constructor() {
     super();
   }
-  
+
   async onModuleInit() {
     try {
       await this.$connect();
@@ -18,7 +23,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
       this.logger.warn(error.message);
     }
   }
-  
+
   // For Prisma 5.0.0+, we need to handle shutdown differently
   async enableShutdownHooks(app: INestApplication) {
     // Use process events instead of Prisma's beforeExit
